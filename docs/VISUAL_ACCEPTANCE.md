@@ -273,6 +273,17 @@ M0.2 must include:
 - User app and admin app core navigation paths.
 - No real backend.
 
+M0.2A user-side visual evidence must include:
+
+- Program detail normal and access-restricted states.
+- Add-to-collection Drawer.
+- My Collections normal and empty states.
+- Collection editor normal, empty collection, no-preview rule, unsaved, and permission-denied states.
+- Collection subscribe page normal, copied Toast, reset confirmation Dialog, revoked, and permission-denied states.
+- Email verification page.
+- Forgot password page.
+- Desktop and mobile screenshots for the core user path.
+
 M0.3 must include:
 
 - Playwright desktop and mobile screenshots.

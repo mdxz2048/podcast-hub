@@ -1,5 +1,6 @@
 import { Plus, Radio } from "lucide-react";
 import type { CSSProperties } from "react";
+import { Link } from "react-router-dom";
 import type { Program } from "../types/domain";
 import { programStatusLabel, publicationStateLabel } from "../utils/labels";
 import { Badge } from "./Badge";
@@ -22,7 +23,9 @@ export function ProgramCard({ program }: { program: Program }) {
       <div className="grid gap-4 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold leading-tight">{program.title}</h3>
+            <Link to={`/programs/${program.id}`} className="text-lg font-semibold leading-tight hover:text-action">
+              {program.title}
+            </Link>
             <p className="mt-2 line-clamp-3 text-sm text-secondary">{program.description}</p>
           </div>
           <Badge tone={statusTone(program)}>{programStatusLabel[program.status]}</Badge>
@@ -34,6 +37,9 @@ export function ProgramCard({ program }: { program: Program }) {
           <span>更新于 {program.lastUpdated}</span>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link to={`/programs/${program.id}`}>
+            <Button variant="secondary">查看详情</Button>
+          </Link>
           <Button icon={<Radio className="h-4 w-4" />}>订阅</Button>
           <Button variant="secondary" icon={<Plus className="h-4 w-4" />}>加入合集</Button>
         </div>

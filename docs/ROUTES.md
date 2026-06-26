@@ -12,8 +12,9 @@ Routes are static and Mock-data driven until a later milestone. They do not impl
 | --- | --- | --- | --- |
 | `/` | Home | M0.1 | Static product home with content-led visual direction. |
 | `/register` | Register | M0.1 | Static registration UI; no real Turnstile or email. |
+| `/register/verify` | Email verification | M0.2A | Static six-digit code UI; no real verification service. |
 | `/login` | Login | M0.1 | Static login UI; no real authentication. |
-| `/password-reset` | Password reset | M0.2 | Static future flow. |
+| `/forgot-password` | Password reset request | M0.2A | Static request flow with non-enumerating copy; no email service. |
 
 ## 3. User App Routes
 
@@ -23,6 +24,7 @@ Routes are static and Mock-data driven until a later milestone. They do not impl
 | `/programs/:programId` | Program detail | M0.2 | Static Program and episode preview. |
 | `/collections` | My Collections | M0.2 | Static collection list. |
 | `/collections/:collectionId` | Collection detail/editor | M0.2 | Static editor and RSS state. |
+| `/collections/:collectionId/subscribe` | Collection RSS subscription | M0.2A | Static simulated RSS URL using example.invalid; no RSS XML generation. |
 | `/rss` | RSS feeds | M0.2 | Static token state only. |
 | `/account` | Account | M0.2 | Static account overview. |
 | `/account/sessions` | Account sessions | M0.2 | Static future capability. |
@@ -57,4 +59,3 @@ M0 static pages should include Mock route guard states:
 - Deleted user.
 
 No real route guard is implemented in M0.1.
-

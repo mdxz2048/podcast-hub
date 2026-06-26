@@ -899,11 +899,21 @@ Flow:
 3. User opens Program detail.
 4. User can subscribe to a Program feed or add it to a collection.
 
+M0.2A static behavior:
+
+- Search and scope filters run only against local Mock data.
+- Program detail shows cover, author, category, language, update frequency, access state, rights state, and recent Mock episodes.
+- "Add to Collection" opens a Drawer in the Program context.
+- The Drawer can select an existing collection or create a new local Mock collection.
+- Success feedback is shown with Toast; no API is called.
+
 States:
 
 - No authorized Programs.
 - Program temporarily unavailable.
 - Program has no published episodes.
+- Access restricted.
+- Long title or long description.
 
 ### 4.2 Create Personal Collection
 
@@ -914,6 +924,23 @@ Flow:
 3. User adds authorized Programs.
 4. Platform creates a collection feed containing only authorized content.
 
+M0.2A static behavior:
+
+- Collections are held in front-end memory only.
+- Collection editor uses a local draft for title, description, selected Programs, order, and rules.
+- RSS preview updates immediately from Mock episodes.
+- Save only writes to local Mock state and shows success feedback.
+
+Collection editor states:
+
+- Normal collection.
+- Empty collection.
+- Rule set that produces no preview episodes.
+- Unsaved changes.
+- Save success.
+- Permission denied.
+- Long Program names.
+
 Exceptions:
 
 - If access to a Program is later revoked, its episodes disappear from the collection feed.
@@ -922,10 +949,18 @@ Exceptions:
 
 Flow:
 
-1. User opens RSS Feeds.
-2. User selects Program or Collection.
-3. Platform displays personal RSS URL.
-4. User copies URL into an external podcast client.
+1. User opens a Collection subscribe page.
+2. Platform displays a simulated personal RSS URL.
+3. User copies URL into an external podcast client.
+4. User can reset the simulated RSS address through a confirmation Dialog.
+
+M0.2A static behavior:
+
+- RSS URL uses `example.invalid`.
+- Copy action shows success or failure Toast.
+- Reset action shows confirmation Dialog and Mock success feedback.
+- No RSS XML is generated.
+- No real token is created.
 
 States:
 
@@ -933,6 +968,8 @@ States:
 - Feed revoked.
 - Feed regenerating.
 - Feed unavailable due to permissions.
+- Copy success.
+- Copy failure.
 
 Key buttons:
 

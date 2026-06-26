@@ -29,6 +29,10 @@ export interface Program {
   id: string;
   title: string;
   description: string;
+  author: string;
+  category: string;
+  language: string;
+  updateFrequency: string;
   coverTone: [string, string];
   status: ProgramStatus;
   rightsState: "clear" | "hold" | "needs_note";
@@ -37,6 +41,32 @@ export interface Program {
   sourceCount: number;
   accessState: AccessState;
   lastUpdated: string;
+}
+
+export interface Episode {
+  id: string;
+  programId: string;
+  title: string;
+  publishedAt: string;
+  duration: string;
+  summary: string;
+}
+
+export interface CollectionRules {
+  sortOrder: "newest" | "oldest";
+  perProgramLimit: number;
+  totalLimit: number;
+}
+
+export interface Collection {
+  id: string;
+  title: string;
+  description: string;
+  programIds: string[];
+  accessScope: "private" | "selected_users";
+  rssTokenState: "active" | "revoked";
+  lastUpdatedAt: string;
+  rules: CollectionRules;
 }
 
 export interface Source {
@@ -66,4 +96,3 @@ export interface ImportJob {
   errorCategory?: string;
   nextAction: string;
 }
-

@@ -35,6 +35,10 @@ Fields:
 - `id`
 - `title`
 - `description`
+- `author`
+- `category`
+- `language`
+- `updateFrequency`
 - `coverUrl`
 - `status`
 - `rightsState`
@@ -107,9 +111,31 @@ Fields:
 
 - `id`
 - `title`
+- `description`
 - `programIds`
+- `accessScope`
 - `rssTokenState`
 - `lastUpdatedAt`
+- `rules`
+
+### 2.8 Episode
+
+Fields:
+
+- `id`
+- `programId`
+- `title`
+- `publishedAt`
+- `duration`
+- `summary`
+
+### 2.9 CollectionRules
+
+Fields:
+
+- `sortOrder`: newest or oldest.
+- `perProgramLimit`
+- `totalLimit`
 
 ## 3. Boundary Data
 
@@ -126,6 +152,9 @@ Mock data must include:
 - User with no access.
 - Suspended user.
 - Revoked RSS token.
+- Collection with no Programs.
+- Collection rule set that produces no RSS preview episodes.
+- Simulated RSS URL using `example.invalid`.
 
 ## 4. Static State Sets
 
@@ -145,4 +174,3 @@ Mock data should use:
 - Clearly fake IDs.
 - Example domains such as `example.invalid`.
 - No real tokens, cookies, passwords, email verification codes, or session secrets.
-

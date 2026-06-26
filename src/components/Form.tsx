@@ -19,12 +19,16 @@ export function Input({ label, hint, className = "", ...props }: FieldProps) {
   );
 }
 
-export function SearchBar({ placeholder = "搜索" }: { placeholder?: string }) {
+interface SearchBarProps extends InputHTMLAttributes<HTMLInputElement> {
+  placeholder?: string;
+}
+
+export function SearchBar({ placeholder = "搜索", ...props }: SearchBarProps) {
   return (
     <label className="relative block">
       <span className="sr-only">搜索</span>
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-      <input className="min-h-11 w-full rounded-md border border-border bg-surface pl-10 pr-3 text-sm" placeholder={placeholder} />
+      <input className="min-h-11 w-full rounded-md border border-border bg-surface pl-10 pr-3 text-sm" placeholder={placeholder} {...props} />
     </label>
   );
 }

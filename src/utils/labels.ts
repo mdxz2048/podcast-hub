@@ -57,3 +57,20 @@ export const errorCategoryLabel: Record<string, string> = {
   auth_required: "需要重新授权",
   qr_expired: "二维码已过期"
 };
+
+export const accessStateLabel: Record<Program["accessState"], string> = {
+  authorized: "已授权",
+  public: "公开可访问",
+  blocked: "访问受限"
+};
+
+export const rightsStateLabel: Record<Program["rightsState"], string> = {
+  clear: "权利已确认",
+  hold: "权利暂缓",
+  needs_note: "需要补充说明"
+};
+
+export const rssTokenStateLabel = {
+  active: "RSS 已启用",
+  revoked: "RSS 已撤销"
+};

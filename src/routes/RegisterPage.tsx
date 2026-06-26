@@ -1,4 +1,5 @@
 import { MailCheck } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "../components/Button";
 import { Input } from "../components/Form";
 import { SuccessFeedback } from "../components/StateBlocks";
@@ -29,7 +30,9 @@ export function RegisterPage() {
           </div>
           <p className="mt-2">M0.1 不接入 Cloudflare Turnstile 或邮件服务，这里只用于视觉占位。</p>
         </div>
-        <Button type="button">发送验证码</Button>
+        <Link to="/register/verify">
+          <Button type="button">发送验证码</Button>
+        </Link>
       </form>
     </section>
   );

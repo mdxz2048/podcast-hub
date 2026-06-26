@@ -1,4 +1,5 @@
 import { KeyRound } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "../components/Button";
 import { Input } from "../components/Form";
 import { ErrorState, SuccessFeedback } from "../components/StateBlocks";
@@ -27,6 +28,10 @@ export function LoginPage() {
           <p className="mt-2">后续可在这里出现 Turnstile。M0.1 只保留静态视觉状态。</p>
         </div>
         <Button type="button">登录</Button>
+        <div className="flex flex-wrap justify-between gap-3 text-sm text-secondary">
+          <Link className="hover:text-action" to="/forgot-password">忘记密码</Link>
+          <Link className="hover:text-action" to="/register">创建账号</Link>
+        </div>
       </form>
     </section>
   );

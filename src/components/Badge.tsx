@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 type Tone = "success" | "warning" | "danger" | "info" | "neutral";
 
 const toneClass: Record<Tone, string> = {
@@ -8,11 +10,10 @@ const toneClass: Record<Tone, string> = {
   neutral: "border-neutral/25 bg-neutral/10 text-neutral"
 };
 
-export function Badge({ children, tone = "neutral" }: { children: string; tone?: Tone }) {
+export function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: Tone }) {
   return (
     <span className={`inline-flex items-center rounded-sm border px-2 py-1 text-xs font-medium ${toneClass[tone]}`}>
       {children}
     </span>
   );
 }
-
