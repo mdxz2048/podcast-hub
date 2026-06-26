@@ -80,6 +80,9 @@ pnpm-debug.log*
 .svelte-kit/
 coverage/
 storybook-static/
+test-results/
+playwright-report/
+screenshots/
 
 # Build output
 out/
