@@ -35,6 +35,7 @@ export function HomePage() {
               <div
                 className="cover-art relative aspect-square rounded-md"
                 style={{ "--cover-a": program.coverTone[0], "--cover-b": program.coverTone[1] } as CSSProperties}
+                aria-hidden="true"
               />
               <div className="min-w-0 py-1">
                 <p className="text-xs text-muted">精选 {index + 1}</p>

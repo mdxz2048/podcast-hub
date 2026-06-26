@@ -39,7 +39,7 @@ export function AdminProgramsPage() {
         {programs.map((program) => (
           <article key={program.id} className="grid gap-3 border-b border-border px-4 py-4 last:border-b-0 lg:grid-cols-[1.4fr_140px_120px_120px_1fr] lg:items-center">
             <div className="min-w-0">
-              <Link to={`/admin/programs/${program.id}`} className="font-semibold leading-tight hover:text-action">{program.title}</Link>
+              <Link to={`/admin/programs/${program.id}`} className="break-words font-semibold leading-tight hover:text-action">{program.title}</Link>
               <p className="mt-1 line-clamp-2 text-sm text-secondary">{program.description}</p>
             </div>
             <Badge tone={program.status === "rights_hold" ? "danger" : program.status === "draft" ? "warning" : "success"}>{programStatusLabel[program.status]}</Badge>

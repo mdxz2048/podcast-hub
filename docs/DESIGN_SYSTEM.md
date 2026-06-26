@@ -446,6 +446,9 @@ Dialog rules:
 - Show the affected object.
 - Show consequences.
 - Require explicit confirmation for destructive actions.
+- Focus moves to a meaningful control when opened.
+- `Escape` closes closable dialogs and drawers.
+- Focus returns to the trigger after closing.
 
 ## 10. Log Viewer
 

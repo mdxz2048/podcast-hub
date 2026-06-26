@@ -12,6 +12,13 @@ Every async workflow must include:
 - Success feedback.
 - Mobile layout.
 
+M0.3 interaction baseline:
+
+- Shared controls keep visible keyboard focus.
+- Dialog and Drawer support Escape close and focus return.
+- Dangerous operations use explicit confirmation dialogs.
+- Long text and long email boundaries are verified on desktop and mobile.
+
 Every admin workflow must show:
 
 - Current status.

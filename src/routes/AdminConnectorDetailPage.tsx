@@ -1,15 +1,20 @@
 import { ArrowLeft, Ban, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { KeyValue, MetricCard } from "../components/AdminPrimitives";
+import { Dialog } from "../components/Dialog";
 import { SuccessFeedback } from "../components/StateBlocks";
 import { connectors, jobs, sources } from "../mock/data";
+import { useMockState } from "../mock/MockState";
 import { authModeLabel, connectorKindLabel, connectorStatusLabel, executionModeLabel, ingestionTypeLabel, jobStatusLabel, triggerTypeLabel } from "../utils/labels";
 
 export function AdminConnectorDetailPage() {
   const { connectorId } = useParams();
   const [params] = useSearchParams();
+  const [pendingAction, setPendingAction] = useState<"enable" | "disable" | null>(null);
+  const { showToast } = useMockState();
   const connector = connectors.find((item) => item.id === connectorId);
   if (!connector) return <div>Connector 不存在</div>;
   const boundSources = sources.filter((source) => connector.boundSourceIds.includes(source.id));
@@ -32,8 +37,8 @@ export function AdminConnectorDetailPage() {
             <p className="mt-2 text-secondary">版本 {connector.version} · {connector.nextAction}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button icon={<CheckCircle2 className="h-4 w-4" />}>启用 Mock</Button>
-            <Button variant="danger" icon={<Ban className="h-4 w-4" />}>禁用 Mock</Button>
+            <Button icon={<CheckCircle2 className="h-4 w-4" />} onClick={() => setPendingAction("enable")}>启用 Mock</Button>
+            <Button variant="danger" icon={<Ban className="h-4 w-4" />} onClick={() => setPendingAction("disable")}>禁用 Mock</Button>
           </div>
         </div>
       </section>
@@ -81,6 +86,23 @@ export function AdminConnectorDetailPage() {
           </div>
         </section>
       </div>
+      <Dialog
+        open={pendingAction !== null}
+        title={pendingAction === "disable" ? "禁用 Connector" : "启用 Connector"}
+        description={pendingAction === "disable"
+          ? `确认禁用「${connector.name}」？禁用后绑定来源无法启动新任务。`
+          : `确认启用「${connector.name}」？启用后来源可继续发起导入任务。`}
+        confirmLabel={pendingAction === "disable" ? "确认禁用" : "确认启用"}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={() => {
+          showToast({
+            tone: "success",
+            title: pendingAction === "disable" ? "Connector 已禁用" : "Connector 已启用",
+            message: "仅更新模拟状态，没有执行真实 Connector。"
+          });
+          setPendingAction(null);
+        }}
+      />
     </div>
   );
 }

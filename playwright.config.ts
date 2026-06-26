@@ -8,7 +8,7 @@ export default defineConfig({
     trace: "off"
   },
   webServer: {
-    command: "corepack pnpm dev -- --port 5173",
+    command: "npx pnpm dev -- --port 5173",
     url: "http://127.0.0.1:5173",
     reuseExistingServer: true,
     timeout: 120000

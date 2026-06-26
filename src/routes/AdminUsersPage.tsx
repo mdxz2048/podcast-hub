@@ -1,8 +1,10 @@
 import { Eye, Radio, ShieldOff, ShieldCheck } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
+import { Dialog } from "../components/Dialog";
 import { Drawer } from "../components/Drawer";
 import { SearchBar, Select } from "../components/Form";
 import { PageHeader } from "../components/PageShell";
@@ -14,11 +16,23 @@ import { responsibilityLabel, rssTokenStateLabel, userRoleLabel, userStatusLabel
 export function AdminUsersPage() {
   const [params] = useSearchParams();
   const { showToast } = useMockState();
+  const [pendingAction, setPendingAction] = useState<{ type: "revoke_rss" | "toggle_suspend"; userId: string } | null>(null);
   const state = params.get("state");
   if (state === "denied") return <PermissionDeniedState />;
 
-  const activeUser = adminUsers.find((user) => user.id === params.get("drawer"));
-  const visible = state === "empty" ? [] : adminUsers;
+  const longTextUsers = adminUsers.map((user, index) => (
+    index === 2
+      ? {
+        ...user,
+        email: "listener.with.an.extremely.long.address.for.visual.acceptance.and.mobile.overflow.check@example.invalid",
+        displayName: "普通用户（超长邮箱样例）",
+        accessSummary: "用于验证用户列表在超长邮箱和超长说明场景下不会出现布局错位或横向溢出。"
+      }
+      : user
+  ));
+  const visible = state === "empty" ? [] : state === "long" ? longTextUsers : adminUsers;
+  const activeUser = visible.find((user) => user.id === params.get("drawer"));
+  const actionTarget = pendingAction ? adminUsers.find((user) => user.id === pendingAction.userId) : undefined;
 
   function action(title: string) {
     showToast({ tone: "success", title, message: "用户与访问权限操作已写入模拟状态，未调用真实接口。" });
@@ -44,7 +58,7 @@ export function AdminUsersPage() {
                     {user.responsibilityLabels.map((label) => <Badge key={label} tone="info">{responsibilityLabel[label]}</Badge>)}
                   </div>
                   <h2 className="mt-3 text-lg font-semibold">{user.displayName}</h2>
-                  <p className="mt-1 font-mono text-sm text-secondary">{user.email}</p>
+                  <p className="mt-1 break-all font-mono text-sm text-secondary">{user.email}</p>
                   <p className="mt-2 text-sm text-secondary">{user.accessSummary}</p>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2 xl:min-w-[360px]">
@@ -58,8 +72,8 @@ export function AdminUsersPage() {
                 <Link to={`/admin/users?drawer=${user.id}`}>
                   <Button variant="secondary" icon={<Eye className="h-4 w-4" />}>查看访问权限</Button>
                 </Link>
-                <Button variant="secondary" icon={<Radio className="h-4 w-4" />} onClick={() => action("RSS Token 已撤销")}>撤销 RSS Token</Button>
-                <Button variant={user.status === "suspended" ? "secondary" : "danger"} icon={user.status === "suspended" ? <ShieldCheck className="h-4 w-4" /> : <ShieldOff className="h-4 w-4" />} onClick={() => action(user.status === "suspended" ? "用户已恢复" : "用户已暂停")}>
+                <Button variant="secondary" icon={<Radio className="h-4 w-4" />} onClick={() => setPendingAction({ type: "revoke_rss", userId: user.id })}>撤销 RSS Token</Button>
+                <Button variant={user.status === "suspended" ? "secondary" : "danger"} icon={user.status === "suspended" ? <ShieldCheck className="h-4 w-4" /> : <ShieldOff className="h-4 w-4" />} onClick={() => setPendingAction({ type: "toggle_suspend", userId: user.id })}>
                   {user.status === "suspended" ? "恢复用户" : "暂停用户"}
                 </Button>
               </div>
@@ -86,6 +100,22 @@ export function AdminUsersPage() {
           </div>
         ) : null}
       </Drawer>
+      <Dialog
+        open={Boolean(actionTarget && pendingAction)}
+        title={pendingAction?.type === "revoke_rss" ? "撤销 RSS Token" : actionTarget?.status === "suspended" ? "恢复用户" : "暂停用户"}
+        description={pendingAction?.type === "revoke_rss"
+          ? `确认撤销「${actionTarget?.displayName ?? ""}」的私有 RSS Token？`
+          : actionTarget?.status === "suspended"
+            ? `确认恢复「${actionTarget?.displayName ?? ""}」账号？`
+            : `确认暂停「${actionTarget?.displayName ?? ""}」账号？暂停后私有 RSS 应立即失效。`}
+        confirmLabel={pendingAction?.type === "revoke_rss" ? "确认撤销" : actionTarget?.status === "suspended" ? "确认恢复" : "确认暂停"}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={() => {
+          if (!actionTarget || !pendingAction) return;
+          action(pendingAction.type === "revoke_rss" ? "RSS Token 已撤销" : actionTarget.status === "suspended" ? "用户已恢复" : "用户已暂停");
+          setPendingAction(null);
+        }}
+      />
     </div>
   );
 }

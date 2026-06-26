@@ -19,7 +19,8 @@ export function LoginPage() {
       <form className="grid gap-5 rounded-lg border border-border bg-surface p-6 shadow-subtle">
         {state === "error" ? <ErrorState title="无法完成登录" /> : null}
         {state === "success" ? <SuccessFeedback message="已登录状态仅作为模拟反馈展示。" /> : null}
-        <Input label="邮箱" placeholder="name@example.invalid" type="email" />
+        {state === "focus" ? <SuccessFeedback message="键盘焦点已定位到邮箱输入框，用于可访问性截图验证。" /> : null}
+        <Input label="邮箱" placeholder="name@example.invalid" type="email" autoFocus={state === "focus"} />
         <Input label="密码" placeholder="请输入密码" type="password" />
         <div className="rounded-md border border-border bg-subtle p-4 text-sm text-secondary">
           <div className="flex items-center gap-2 font-medium text-primary">

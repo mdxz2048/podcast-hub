@@ -228,6 +228,10 @@ Before visual acceptance:
 - Contrast meets target accessibility levels.
 - Icon-only buttons have accessible names.
 - Loading and async state changes are announced where appropriate.
+- Dialog and Drawer focus behavior is verified:
+  - focus moves into overlay on open
+  - Escape closes closable overlays
+  - focus returns to trigger after close
 
 ## 11. Dark Mode Policy
 
@@ -302,5 +306,21 @@ M0.3 must include:
 - Information hierarchy check.
 - Basic accessibility check.
 - Visual acceptance report.
+
+## 13. Screenshot Naming and Overlay Rules
+
+Use stable, state-first names so the screenshot corpus remains searchable and reviewable:
+
+- `home-normal`
+- `program-detail-restricted`
+- `admin-import-job-waiting-auth`
+- `admin-review-drawer-overlay`
+- `rss-subscribe-reset-dialog-overlay`
+
+Overlay rules:
+
+- Normal pages should use `fullPage: true`.
+- Drawers, dialogs, toasts, waiting-auth overlays should use `fullPage: false`.
+- Overlay filenames must include `overlay`.
 
 M1 must not begin until M0.3 is accepted.
