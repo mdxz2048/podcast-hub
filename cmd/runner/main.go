@@ -23,14 +23,14 @@ func main() {
 		logger.Info("runner disabled", "mode", "disabled")
 		return
 	}
-	if mode != "fixture_subprocess" {
+	if mode != "docker_trusted_admin" {
 		logger.Error("unsupported runner mode", "mode", mode)
 		os.Exit(1)
 	}
 	databaseURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
-	fixtureCommand := strings.TrimSpace(os.Getenv("RUNNER_FIXTURE_COMMAND"))
-	if databaseURL == "" || fixtureCommand == "" {
-		logger.Error("fixture runner requires DATABASE_URL and RUNNER_FIXTURE_COMMAND")
+	image := strings.TrimSpace(os.Getenv("RUNNER_PYTHON_BASIC_IMAGE"))
+	if databaseURL == "" || image == "" {
+		logger.Error("docker trusted admin runner requires DATABASE_URL and RUNNER_PYTHON_BASIC_IMAGE")
 		os.Exit(1)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -43,9 +43,11 @@ func main() {
 	defer dbPool.Close()
 
 	jobService := jobs.NewService(postgres.NewJobStore(dbPool), nil)
-	r := runner.New(jobService, runner.SubprocessExecutor{Command: fixtureCommand}, runner.Config{
-		WorkspaceRoot: os.Getenv("RUNNER_WORKSPACE_ROOT"),
-	})
+	executor := runner.DockerTrustedAdminExecutor{Config: runner.DockerTrustedAdminConfig{
+		Image:                image,
+		ConnectorPackagePath: getEnv("RUNNER_FIXTURE_PACKAGE_DIR", "internal/runner/testdata"),
+	}}
+	r := runner.New(jobService, executor, runner.Config{WorkspaceRoot: os.Getenv("RUNNER_WORKSPACE_ROOT")})
 	if err := r.RunOnce(ctx); err != nil {
 		if errors.Is(err, runner.ErrNoQueuedJob) {
 			logger.Info("no queued import job")
@@ -55,4 +57,12 @@ func main() {
 		os.Exit(1)
 	}
 	logger.Info("runner finished one import job")
+}
+
+func getEnv(key string, fallback string) string {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	return value
 }

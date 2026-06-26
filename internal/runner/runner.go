@@ -17,6 +17,7 @@ import (
 var ErrNoQueuedJob = errors.New("no queued import job")
 
 type JobService interface {
+	GetJob(ctx context.Context, jobID string) (jobs.ImportJob, error)
 	ClaimNextQueuedJob(ctx context.Context) (jobs.ImportJob, bool, error)
 	AppendEvent(ctx context.Context, event jobs.ImportJobEvent) error
 	AppendArtifact(ctx context.Context, artifact jobs.ImportJobArtifact) error
@@ -34,9 +35,11 @@ type ExecutionResult struct {
 }
 
 type Config struct {
-	WorkspaceRoot  string
-	ProtocolLimits ProtocolLimits
-	ArtifactLimits ArtifactLimits
+	WorkspaceRoot            string
+	ProtocolLimits           ProtocolLimits
+	ArtifactLimits           ArtifactLimits
+	ExecutionTimeout         time.Duration
+	CancellationPollInterval time.Duration
 }
 
 type Runner struct {
@@ -51,6 +54,12 @@ func New(jobService JobService, executor Executor, config Config) *Runner {
 	}
 	if config.ArtifactLimits.MaxArtifacts == 0 {
 		config.ArtifactLimits = DefaultArtifactLimits()
+	}
+	if config.ExecutionTimeout == 0 {
+		config.ExecutionTimeout = 15 * time.Minute
+	}
+	if config.CancellationPollInterval == 0 {
+		config.CancellationPollInterval = 250 * time.Millisecond
 	}
 	return &Runner{jobs: jobService, executor: executor, config: config}
 }
@@ -70,7 +79,14 @@ func (r *Runner) RunOnce(ctx context.Context) error {
 	}
 	defer os.RemoveAll(workspace)
 
-	result := r.executor.Execute(ctx, inputPath, outputDir)
+	execCtx, cancel := context.WithTimeout(ctx, r.executionTimeout(job))
+	defer cancel()
+	cancelled := make(chan struct{}, 1)
+	stopPoll := make(chan struct{})
+	go r.watchCancellation(execCtx, cancel, job.ID, cancelled, stopPoll)
+	result := r.executor.Execute(execCtx, inputPath, outputDir)
+	close(stopPoll)
+
 	stdout := result.Stdout
 	if stdout == nil {
 		stdout = bytes.NewReader(nil)
@@ -78,6 +94,16 @@ func (r *Runner) RunOnce(ctx context.Context) error {
 	protocol, parseErr := ParseJSONLines(job.ID, stdout, result.ExitCode, r.config.ProtocolLimits)
 	for _, event := range protocol.Events {
 		_ = r.jobs.AppendEvent(ctx, event)
+	}
+	if execCtx.Err() == context.DeadlineExceeded {
+		_ = r.jobs.AppendEvent(ctx, jobs.ImportJobEvent{ImportJobID: job.ID, EventType: "runner.timeout", Level: "error", MessageRedacted: "Runner timed out and stopped execution."})
+		_, _ = r.jobs.TransitionJob(ctx, job.ID, jobs.JobStatusFailed, "timeout", "Runner timed out.")
+		return context.DeadlineExceeded
+	}
+	if wasCancelled(cancelled) {
+		_ = r.jobs.AppendEvent(ctx, jobs.ImportJobEvent{ImportJobID: job.ID, EventType: "runner.cancelled", Level: "warning", MessageRedacted: "Runner stopped execution after cancellation request."})
+		_, _ = r.jobs.TransitionJob(ctx, job.ID, jobs.JobStatusCancelled, "", "")
+		return context.Canceled
 	}
 	if parseErr != nil {
 		_, _ = r.jobs.TransitionJob(ctx, job.ID, jobs.JobStatusFailed, failureCode(parseErr), redact(parseErr.Error()))
@@ -101,6 +127,52 @@ func (r *Runner) RunOnce(ctx context.Context) error {
 	}
 	_, err = r.jobs.TransitionJob(ctx, job.ID, jobs.JobStatusFailed, "connector_failed", "Connector reported failure.")
 	return err
+}
+
+func (r *Runner) executionTimeout(job jobs.ImportJob) time.Duration {
+	if job.TimeoutAt != nil {
+		until := time.Until(*job.TimeoutAt)
+		if until > 0 {
+			return until
+		}
+		return time.Nanosecond
+	}
+	return r.config.ExecutionTimeout
+}
+
+func (r *Runner) watchCancellation(ctx context.Context, cancel context.CancelFunc, jobID string, cancelled chan<- struct{}, stop <-chan struct{}) {
+	ticker := time.NewTicker(r.config.CancellationPollInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-stop:
+			return
+		case <-ticker.C:
+			job, err := r.jobs.GetJob(ctx, jobID)
+			if err != nil {
+				continue
+			}
+			if job.CancellationRequestedAt != nil {
+				select {
+				case cancelled <- struct{}{}:
+				default:
+				}
+				cancel()
+				return
+			}
+		}
+	}
+}
+
+func wasCancelled(cancelled <-chan struct{}) bool {
+	select {
+	case <-cancelled:
+		return true
+	default:
+		return false
+	}
 }
 
 func (r *Runner) prepareWorkspace(job jobs.ImportJob) (string, string, string, error) {

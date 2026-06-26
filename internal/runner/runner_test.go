@@ -3,6 +3,7 @@ package runner
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,6 +58,68 @@ func TestRunnerFixtureCompletesAndCleansWorkspace(t *testing.T) {
 	}
 }
 
+func TestRunnerSkipsQueuedCancelledJob(t *testing.T) {
+	jobService := &fakeJobService{job: jobs.ImportJob{ID: "job1", Status: jobs.JobStatusCancelled}}
+	r := New(jobService, fixtureExecutor{run: func(string, string) ExecutionResult {
+		t.Fatal("executor should not run cancelled queued job")
+		return ExecutionResult{}
+	}}, Config{WorkspaceRoot: t.TempDir()})
+	if err := r.RunOnce(context.Background()); !errors.Is(err, ErrNoQueuedJob) {
+		t.Fatalf("expected no queued job, got %v", err)
+	}
+}
+
+func TestRunnerRunningCancelStopsExecution(t *testing.T) {
+	jobService := &fakeJobService{
+		cancelOnGet: true,
+		job: jobs.ImportJob{
+			ID:                 "job1",
+			ConnectorSourceID:  "source1",
+			ConnectorVersionID: "version1",
+			Status:             jobs.JobStatusQueued,
+			TriggerType:        "manual",
+			AuthMode:           "none",
+			ExecutionMode:      "unattended",
+			CreatedAt:          time.Now(),
+		},
+	}
+	executor := fixtureExecutor{run: func(_ string, _ string) ExecutionResult {
+		<-time.After(50 * time.Millisecond)
+		return ExecutionResult{Stdout: bytes.NewReader(nil), ExitCode: 137, Err: context.Canceled}
+	}}
+	r := New(jobService, executor, Config{WorkspaceRoot: t.TempDir(), CancellationPollInterval: time.Millisecond})
+	if err := r.RunOnce(context.Background()); !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context canceled, got %v", err)
+	}
+	if jobService.job.Status != jobs.JobStatusCancelled {
+		t.Fatalf("expected cancelled job, got %s", jobService.job.Status)
+	}
+}
+
+func TestRunnerTimeoutFailsJob(t *testing.T) {
+	jobService := &fakeJobService{job: jobs.ImportJob{
+		ID:                 "job1",
+		ConnectorSourceID:  "source1",
+		ConnectorVersionID: "version1",
+		Status:             jobs.JobStatusQueued,
+		TriggerType:        "manual",
+		AuthMode:           "none",
+		ExecutionMode:      "unattended",
+		CreatedAt:          time.Now(),
+	}}
+	executor := fixtureExecutor{run: func(_ string, _ string) ExecutionResult {
+		time.Sleep(20 * time.Millisecond)
+		return ExecutionResult{Stdout: bytes.NewReader(nil), ExitCode: 137, Err: context.DeadlineExceeded}
+	}}
+	r := New(jobService, executor, Config{WorkspaceRoot: t.TempDir(), ExecutionTimeout: time.Millisecond, CancellationPollInterval: time.Millisecond})
+	if err := r.RunOnce(context.Background()); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("expected deadline exceeded, got %v", err)
+	}
+	if jobService.job.Status != jobs.JobStatusFailed || jobService.job.FailureCode != "timeout" {
+		t.Fatalf("expected timeout failure, got %+v", jobService.job)
+	}
+}
+
 type fixtureExecutor struct {
 	run func(inputPath string, outputDir string) ExecutionResult
 }
@@ -66,10 +129,19 @@ func (e fixtureExecutor) Execute(_ context.Context, inputPath string, outputDir 
 }
 
 type fakeJobService struct {
-	job       jobs.ImportJob
-	claimed   bool
-	events    []jobs.ImportJobEvent
-	artifacts []jobs.ImportJobArtifact
+	job         jobs.ImportJob
+	claimed     bool
+	cancelOnGet bool
+	events      []jobs.ImportJobEvent
+	artifacts   []jobs.ImportJobArtifact
+}
+
+func (s *fakeJobService) GetJob(context.Context, string) (jobs.ImportJob, error) {
+	if s.cancelOnGet && s.job.CancellationRequestedAt == nil {
+		now := time.Now()
+		s.job.CancellationRequestedAt = &now
+	}
+	return s.job, nil
 }
 
 func (s *fakeJobService) ClaimNextQueuedJob(context.Context) (jobs.ImportJob, bool, error) {

@@ -115,6 +115,20 @@ M1.2B Runner boundaries:
 - Artifacts are metadata only: relative path, size, SHA-256, and artifact type.
 - Internal workspace paths and file contents are not returned by API responses.
 
+M1.2C adds `RUNNER_MODE=docker_trusted_admin` for Alpha fixture execution. This mode is for administrator-trusted Connector packages only. It is not a complete hostile multi-tenant sandbox and must not be described as safe for arbitrary third-party code.
+
+M1.2C Docker boundary:
+
+- API service still does not require or use Docker socket access.
+- Only the separate Runner process may have Docker execution capability.
+- Connector containers are created with `privileged=false`, non-host networking, non-root user, read-only root filesystem, CPU limit, memory limit, PID limit, and execution timeout.
+- `/work` is the only writable workspace mount.
+- Connector package content is mounted read-only at `/connector`.
+- Docker socket and host root are not mounted into Connector containers.
+- Cancellation requests stop running execution and transition the Job to `cancelled`.
+- Timeouts stop running execution and transition the Job to `failed` with `failure_code=timeout`.
+- Domain-level network allowlist enforcement is not implemented in M1.2C; any allowlist is policy metadata only until a later network-control phase.
+
 Required properties:
 
 - Non-root user.

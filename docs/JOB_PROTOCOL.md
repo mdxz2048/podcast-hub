@@ -4,7 +4,7 @@
 
 The Job Protocol defines how the platform communicates with Connectors and how Connectors return events and outputs.
 
-Status in M1.2B: Import Jobs can be created through admin APIs, and the independent Runner can execute only a test fixture subprocess to validate the protocol. Docker execution, real external Connectors, duoting, scheduled Jobs, interactive/QR Jobs, Program/Episode staging, and RSS publication are not implemented.
+Status in M1.2C: Import Jobs can be created through admin APIs, and the independent Runner can execute only the test fixture in trusted-admin Docker mode. Real external Connectors, duoting, scheduled Jobs, interactive/QR Jobs, Program/Episode staging, and RSS publication are not implemented.
 
 The protocol is intentionally file and stream based:
 
@@ -16,9 +16,9 @@ The protocol is intentionally file and stream based:
 M1.2B non-goal reminder:
 
 - API service does not run connector code.
-- Runner does not run Docker yet.
 - Runner does not run real external Connectors.
-- Fixture execution is limited to protocol tests and explicit local runner mode.
+- Fixture execution is limited to protocol tests and explicit `RUNNER_MODE=docker_trusted_admin`.
+- `docker_trusted_admin` is an Alpha mode for fully trusted administrator-selected packages only, not an untrusted third-party sandbox.
 
 ## 2. Protocol Guarantees
 
