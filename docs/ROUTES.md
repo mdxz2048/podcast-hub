@@ -54,6 +54,7 @@ Account and admin identity routes are connected to real backend APIs. Connector 
 
 Related real admin APIs in M1.0C:
 
+- `GET /healthz`
 - `GET /admin/me`
 - `GET /admin/system/status`
 
@@ -95,6 +96,13 @@ Additional real admin Import Job APIs in M1.2A:
 - `POST /admin/import-jobs/{jobId}/cancel`
 
 M1.2B adds the independent `cmd/runner` process and does not add user-facing routes. Existing Import Job APIs continue to return metadata only: no Secret values, no package content, no absolute paths, no Artifact file contents, no media download, and no RSS publication actions.
+
+M1.2D adds UI access to the Import Job workflow:
+
+- Source detail can create a manual Import Job when the Source is active, manual, and unattended.
+- Import Job list/detail pages show real API metadata and Runner disabled reason from `GET /admin/system/status`.
+- Artifact display is metadata-only.
+- No publish, RSS, subscription, or media download controls are exposed.
 
 ## 5. Route Guard States
 

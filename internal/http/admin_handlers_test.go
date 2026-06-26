@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	stdhttp "net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/mdxz2048/podcast-hub/config"
@@ -94,6 +95,27 @@ func TestAdminSystemStatusSuccessForAdmin(t *testing.T) {
 	server.Router().ServeHTTP(rec, req)
 	if rec.Code != stdhttp.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+}
+
+func TestHealthzIsPublicAndRedacted(t *testing.T) {
+	server := testServer(t)
+	req := httptest.NewRequest(stdhttp.MethodGet, "/healthz", nil)
+	req.Header.Set("Origin", "http://127.0.0.1:5173")
+	rec := httptest.NewRecorder()
+
+	server.Router().ServeHTTP(rec, req)
+	if rec.Code != stdhttp.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `"api":"ok"`) {
+		t.Fatalf("expected api ok health response, got %s", body)
+	}
+	for _, forbidden := range []string{"SESSION_PEPPER", "AUTH_CODE_PEPPER", "SECRETS_MASTER_KEY", "password", "token"} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("health response leaked %q: %s", forbidden, body)
+		}
 	}
 }
 

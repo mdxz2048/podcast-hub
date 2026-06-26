@@ -65,6 +65,12 @@ async function mockConnectorAdminApi(page: Page) {
     required_secrets: ["session_file"],
     missing_secrets: ["session_file"]
   };
+  const runnableSourceDetail = {
+    source: { id: "s-runnable", connector_version_id: "v-approved", name: "Runnable Source", description: "ready", status: "active", trigger_type: "manual", auth_mode: "none", execution_mode: "unattended", config_json: "{}", network_mode: "trusted_admin", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" },
+    secret_bindings: [],
+    required_secrets: [],
+    missing_secrets: []
+  };
   const secrets = [{ id: "secret-1", name: "Session file", secret_type: "file", encryption_version: "aes-gcm-v1", created_at: "2026-01-01T00:00:00Z", binding_count: 0 }];
   const importJob = { id: "job-1", connector_source_id: "s1", connector_version_id: "v-approved", status: "queued", trigger_type: "manual", auth_mode: "reusable_session", execution_mode: "unattended", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" };
   await page.route("http://127.0.0.1:8080/admin/**", async (route) => {
@@ -73,6 +79,14 @@ async function mockConnectorAdminApi(page: Page) {
     if (request.method() === "GET" && url.pathname.endsWith("/admin/connectors")) {
       const body = JSON.stringify({ connectors: url.searchParams.get("empty") === "1" ? [] : connectors });
       await route.fulfill({ status: 200, contentType: "application/json", body });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/system/status")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ api: "ok", runner: { mode: "disabled", can_run_jobs: false, reason: "RUNNER_MODE=disabled; queued Import Jobs will not execute until a separate Runner is started." } })
+      });
       return;
     }
     if (request.method() === "GET" && url.pathname.endsWith("/admin/connectors/c1")) {
@@ -132,6 +146,14 @@ async function mockConnectorAdminApi(page: Page) {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(sourceDetail) });
       return;
     }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/sources/s-runnable")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(runnableSourceDetail) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/sources/s-runnable/import-jobs")) {
+      await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ job: { ...importJob, connector_source_id: "s-runnable" } }) });
+      return;
+    }
     if (request.method() === "POST" && url.pathname.endsWith("/admin/sources/s1/enable")) {
       await route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: { code: "missing_required_secrets", message: "missing" } }) });
       return;
@@ -153,11 +175,11 @@ async function mockConnectorAdminApi(page: Page) {
       return;
     }
     if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-1/events")) {
-      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ events: [{ id: "evt-1", import_job_id: "job-1", event_type: "job.queued", level: "info", message_redacted: "queued", metadata_redacted: "{}", created_at: "2026-01-01T00:00:00Z" }] }) });
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ events: [{ id: "evt-1", import_job_id: "job-1", event_type: "job.queued", level: "info", message_redacted: "queued token=[redacted]", metadata_redacted: "{\"authorization\":\"[redacted]\"}", created_at: "2026-01-01T00:00:00Z" }] }) });
       return;
     }
     if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-1/artifacts")) {
-      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ artifacts: [] }) });
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ artifacts: [{ id: "artifact-1", import_job_id: "job-1", artifact_type: "episode_metadata", relative_path: "episodes/episode-001.json", size_bytes: 42, sha256: "0".repeat(64), created_at: "2026-01-01T00:00:00Z" }] }) });
       return;
     }
     if (request.method() === "POST" && url.pathname.endsWith("/admin/import-jobs/job-1/cancel")) {
@@ -294,10 +316,22 @@ test("admin import jobs use real API metadata states", async ({ page }) => {
   await mockConnectorAdminApi(page);
   await page.goto("/admin/import-jobs");
   await expect(page.getByText("暂无 Import Job")).toBeVisible();
+  await expect(page.getByText("Runner disabled")).toBeVisible();
   await page.goto("/admin/import-jobs/job-1");
   await expect(page.getByText("job.queued")).toBeVisible();
+  await expect(page.getByText("queued token=[redacted]")).toBeVisible();
+  await expect(page.getByText("episodes/episode-001.json")).toBeVisible();
   await page.getByRole("button", { name: "取消任务" }).click();
   await expect(page.getByText("取消请求已记录。")).toBeVisible();
   await expect(page.getByText("发布")).toHaveCount(0);
   await expect(page.getByText("RSS")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "下载媒体" })).toHaveCount(0);
+});
+
+test("admin can create manual import job from runnable source", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+  await page.goto("/admin/sources/s-runnable");
+  await page.getByRole("button", { name: "创建手动任务" }).click();
+  await expect(page.getByText("Import Job 已创建：job-1")).toBeVisible();
 });

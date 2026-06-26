@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: podcast_hub
+      POSTGRES_USER: podcast_hub
+      POSTGRES_PASSWORD: change_me_alpha_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - alpha_postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.alpha
+    env_file:
+      - .env.alpha
+    environment:
+      DATABASE_URL: postgresql://podcast_hub:change_me_alpha_password@postgres:5432/podcast_hub?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      RUNNER_MODE: disabled
+    depends_on:
+      - postgres
+      - redis
+      - mailpit
+    ports:
+      - "8080:8080"
+    volumes:
+      - alpha_connector_packages:/data/connector-packages
+    command: ["/app/api"]
+
+volumes:
+  alpha_postgres_data:
+  alpha_connector_packages:

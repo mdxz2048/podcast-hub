@@ -112,3 +112,28 @@ go run ./cmd/admin seed --email user@example.invalid --promote
 Security reminder:
 
 - Never place secrets, session dumps, cookies, tokens, or real media into connector package directories.
+
+## M1.2D Alpha environment additions
+
+- `RUNNER_MODE`
+  - Default: `disabled`.
+  - Allowed values: `disabled`, `docker_trusted_admin`.
+  - API service may expose this as non-sensitive status metadata but does not execute Connector code.
+- `RUNNER_PYTHON_BASIC_IMAGE`
+  - Docker image used by the separate trusted-admin Runner for fixture execution.
+- `RUNNER_PYTHON_TELEGRAM_IMAGE`
+  - Reserved placeholder for a future runtime profile. M1.2D does not use Telegram.
+- `RUNNER_WORKSPACE_ROOT`
+  - Local Runner workspace root. Must remain git-ignored.
+- `.env.alpha.example`
+  - Placeholder-only local/internal Alpha environment file.
+  - Copy to `.env.alpha` and replace every placeholder locally.
+  - Do not commit `.env.alpha`.
+
+Generate a local Secret Master Key with one of:
+
+```bash
+openssl rand -base64 32
+```
+
+or a raw 32-byte value managed by the deployment secret store. Never commit the generated value.

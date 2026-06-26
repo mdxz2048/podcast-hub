@@ -1,8 +1,7 @@
 # Podcast Hub
 
 Podcast Hub is a content ingestion and publishing platform.  
-Current phase implements M1.0 account/security infrastructure only.
-M1.0C adds admin bootstrap and backend/admin permission chain.
+Current phase includes real account/admin flows, Connector registry, Source/Secret metadata, Import Job lifecycle, fixture-only Runner protocol, trusted-admin Docker Runner boundaries, and local/internal Alpha deployment preparation.
 
 ## Local development
 
@@ -98,3 +97,14 @@ corepack pnpm run --if-present test
 corepack pnpm build
 git diff --check
 ```
+
+## Deployable Alpha notes
+
+Local/internal Alpha files:
+
+- `.env.alpha.example`
+- `docker-compose.alpha.yml`
+- `Dockerfile.alpha`
+- `docs/ALPHA_DEPLOYMENT.md`
+
+The API service starts with `RUNNER_MODE=disabled` by default and does not mount Docker socket access. Start the Runner separately only for trusted-admin fixture execution. Alpha still does not support public deployment, RSS, real duoting, scheduled jobs, interactive/QR jobs, user subscriptions, or real media download.

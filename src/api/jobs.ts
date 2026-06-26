@@ -12,6 +12,10 @@ export interface ImportJob {
   execution_mode: "unattended";
   failure_code?: string;
   failure_message_redacted?: string;
+  started_at?: string;
+  finished_at?: string;
+  timeout_at?: string;
+  cancellation_requested_at?: string;
   created_at: string;
   updated_at: string;
 }

@@ -129,6 +129,14 @@ M1.2C Docker boundary:
 - Timeouts stop running execution and transition the Job to `failed` with `failure_code=timeout`.
 - Domain-level network allowlist enforcement is not implemented in M1.2C; any allowlist is policy metadata only until a later network-control phase.
 
+M1.2D adds the internal Alpha operating surface:
+
+- Admin web pages expose Import Job list/detail, manual Source trigger, cancellation, redacted events, Artifact metadata, and disabled Runner reason.
+- `/healthz` reports API and dependency health without requiring authentication and without returning secrets.
+- `docker-compose.alpha.yml` prepares local/internal API, PostgreSQL, Redis, and Mailpit services.
+- Runner startup remains separate from API startup; API containers do not mount the Docker socket.
+- Alpha deployment is local/internal only and does not provide public HTTPS, RSS, user catalog, real external Connectors, or production hosting.
+
 Required properties:
 
 - Non-root user.

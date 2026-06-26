@@ -120,6 +120,24 @@ Frontend:
 
 This phase does not run screenshot workflows.
 
+## M1.2D test focus
+
+Backend:
+
+- Public `/healthz` returns only redacted service/dependency health.
+- Admin system status reports non-sensitive Runner mode and disabled reason.
+- API service does not depend on Docker socket access.
+
+Frontend:
+
+- Import Job list/detail pages use real API contracts through Playwright mocks.
+- Source detail can create a manual Import Job from an active runnable Source.
+- Runner disabled reason is visible for queued/running jobs.
+- Artifact display is metadata-only.
+- No publish, RSS, media download, external Connector execution, or user subscription controls are shown.
+
+This phase does not run screenshot workflows.
+
 ## M1.1B test focus
 
 Backend:

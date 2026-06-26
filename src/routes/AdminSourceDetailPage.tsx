@@ -1,5 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { Play } from "lucide-react";
+import { createImportJob } from "../api/jobs";
 import { bindSourceSecret, enableSource, getSource, listSecrets } from "../api/sources";
 import type { ConnectorSourceDetail, SecretRecord } from "../api/sources";
 import { Badge } from "../components/Badge";
@@ -47,13 +49,31 @@ export function AdminSourceDetailPage() {
     }
   }
 
+  async function createJob() {
+    try {
+      const result = await createImportJob(sourceId);
+      setSuccess(`Import Job 已创建：${result.job.id}`);
+    } catch {
+      setError("无法创建 Import Job，请检查 Source 状态、Connector 审核状态、Secret 绑定和现有任务。");
+    }
+  }
+
   if (loading) return <LoadingState title="正在加载 Source 详情" />;
   if (error && !detail) return <ErrorState title={error} />;
   if (!detail) return <ErrorState title="Source 不存在" />;
 
   return (
     <div className="grid gap-6">
-      <PageHeader eyebrow="Source Detail" title={detail.source.name} />
+      <PageHeader eyebrow="Source Detail" title={detail.source.name}>
+        <Button
+          type="button"
+          icon={<Play className="h-4 w-4" />}
+          onClick={createJob}
+          disabled={detail.source.status !== "active" || detail.missing_secrets.length > 0 || detail.source.trigger_type !== "manual" || detail.source.execution_mode !== "unattended"}
+        >
+          创建手动任务
+        </Button>
+      </PageHeader>
       {success ? <SuccessFeedback message={success} /> : null}
       {error ? <ErrorState title={error} /> : null}
       <section className="rounded-lg border border-border bg-surface p-6 shadow-subtle">

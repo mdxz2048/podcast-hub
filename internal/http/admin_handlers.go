@@ -31,6 +31,7 @@ func (s *Server) handleAdminSystemStatus(w stdhttp.ResponseWriter, r *stdhttp.Re
 		writeJSON(w, stdhttp.StatusOK, map[string]any{
 			"api":    "ok",
 			"detail": "restricted",
+			"runner": s.runnerStatus(),
 		})
 		return
 	}
@@ -44,7 +45,38 @@ func (s *Server) handleAdminSystemStatus(w stdhttp.ResponseWriter, r *stdhttp.Re
 			"redis":    s.pingRedis(ctx),
 			"mailpit":  s.pingSMTP(ctx),
 		},
+		"runner": s.runnerStatus(),
 	})
+}
+
+func (s *Server) handleHealthz(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	writeJSON(w, stdhttp.StatusOK, map[string]any{
+		"api": "ok",
+		"dependencies": map[string]any{
+			"database": s.pingDatabase(ctx),
+			"redis":    s.pingRedis(ctx),
+			"mailpit":  s.pingSMTP(ctx),
+		},
+	})
+}
+
+func (s *Server) runnerStatus() map[string]any {
+	mode := s.cfg.RunnerMode
+	if mode == "" {
+		mode = "disabled"
+	}
+	status := map[string]any{
+		"mode":         mode,
+		"can_run_jobs": mode == "docker_trusted_admin",
+	}
+	if mode == "disabled" {
+		status["reason"] = "RUNNER_MODE=disabled; queued Import Jobs will not execute until a separate Runner is started."
+	} else {
+		status["reason"] = "RUNNER_MODE=docker_trusted_admin; only trusted-admin fixture execution is supported."
+	}
+	return status
 }
 
 func (s *Server) pingDatabase(ctx context.Context) string {

@@ -38,32 +38,41 @@ type Config struct {
 
 	ConnectorPackageLocalDir string
 	SecretsMasterKey         string
+
+	RunnerMode                string
+	RunnerPythonBasicImage    string
+	RunnerPythonTelegramImage string
+	RunnerWorkspaceRoot       string
 }
 
 func Load() (Config, error) {
 	cfg := Config{
-		AppEnv:                   getEnv("APP_ENV", "development"),
-		HTTPAddr:                 getEnv("HTTP_ADDR", ":8080"),
-		FrontendOrigin:           getEnv("FRONTEND_ORIGIN", "http://127.0.0.1:5173"),
-		DatabaseURL:              os.Getenv("DATABASE_URL"),
-		RedisURL:                 os.Getenv("REDIS_URL"),
-		SessionCookieName:        getEnv("SESSION_COOKIE_NAME", "podcast_hub_session"),
-		SessionTTL:               durationFromSeconds("SESSION_TTL_SECONDS", 60*60*24*14),
-		SessionCookieSecure:      parseBool(getEnv("SESSION_COOKIE_SECURE", "false")),
-		SessionCookieDomain:      os.Getenv("SESSION_COOKIE_DOMAIN"),
-		SessionPepper:            os.Getenv("SESSION_PEPPER"),
-		AuthCodePepper:           os.Getenv("AUTH_CODE_PEPPER"),
-		TurnstileMode:            getEnv("TURNSTILE_MODE", "mock"),
-		TurnstileSiteKey:         os.Getenv("VITE_TURNSTILE_SITE_KEY"),
-		TurnstileSecretKey:       os.Getenv("TURNSTILE_SECRET_KEY"),
-		SMTPHost:                 getEnv("SMTP_HOST", "127.0.0.1"),
-		SMTPPort:                 parseInt(getEnv("SMTP_PORT", "1025"), 1025),
-		SMTPUsername:             os.Getenv("SMTP_USERNAME"),
-		SMTPPassword:             os.Getenv("SMTP_PASSWORD"),
-		SMTPFrom:                 getEnv("SMTP_FROM", "no-reply@example.invalid"),
-		CSRFHeaderName:           getEnv("CSRF_HEADER_NAME", "X-CSRF-Token"),
-		ConnectorPackageLocalDir: getEnv("CONNECTOR_PACKAGE_LOCAL_DIR", ".local/connector-packages"),
-		SecretsMasterKey:         os.Getenv("SECRETS_MASTER_KEY"),
+		AppEnv:                    getEnv("APP_ENV", "development"),
+		HTTPAddr:                  getEnv("HTTP_ADDR", ":8080"),
+		FrontendOrigin:            getEnv("FRONTEND_ORIGIN", "http://127.0.0.1:5173"),
+		DatabaseURL:               os.Getenv("DATABASE_URL"),
+		RedisURL:                  os.Getenv("REDIS_URL"),
+		SessionCookieName:         getEnv("SESSION_COOKIE_NAME", "podcast_hub_session"),
+		SessionTTL:                durationFromSeconds("SESSION_TTL_SECONDS", 60*60*24*14),
+		SessionCookieSecure:       parseBool(getEnv("SESSION_COOKIE_SECURE", "false")),
+		SessionCookieDomain:       os.Getenv("SESSION_COOKIE_DOMAIN"),
+		SessionPepper:             os.Getenv("SESSION_PEPPER"),
+		AuthCodePepper:            os.Getenv("AUTH_CODE_PEPPER"),
+		TurnstileMode:             getEnv("TURNSTILE_MODE", "mock"),
+		TurnstileSiteKey:          os.Getenv("VITE_TURNSTILE_SITE_KEY"),
+		TurnstileSecretKey:        os.Getenv("TURNSTILE_SECRET_KEY"),
+		SMTPHost:                  getEnv("SMTP_HOST", "127.0.0.1"),
+		SMTPPort:                  parseInt(getEnv("SMTP_PORT", "1025"), 1025),
+		SMTPUsername:              os.Getenv("SMTP_USERNAME"),
+		SMTPPassword:              os.Getenv("SMTP_PASSWORD"),
+		SMTPFrom:                  getEnv("SMTP_FROM", "no-reply@example.invalid"),
+		CSRFHeaderName:            getEnv("CSRF_HEADER_NAME", "X-CSRF-Token"),
+		ConnectorPackageLocalDir:  getEnv("CONNECTOR_PACKAGE_LOCAL_DIR", ".local/connector-packages"),
+		SecretsMasterKey:          os.Getenv("SECRETS_MASTER_KEY"),
+		RunnerMode:                getEnv("RUNNER_MODE", "disabled"),
+		RunnerPythonBasicImage:    os.Getenv("RUNNER_PYTHON_BASIC_IMAGE"),
+		RunnerPythonTelegramImage: os.Getenv("RUNNER_PYTHON_TELEGRAM_IMAGE"),
+		RunnerWorkspaceRoot:       getEnv("RUNNER_WORKSPACE_ROOT", ".local/runner-workspaces"),
 	}
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err
@@ -116,6 +125,11 @@ func (c Config) Validate() error {
 	}
 	if c.TurnstileMode == "cloudflare" && strings.TrimSpace(c.TurnstileSecretKey) == "" {
 		return errors.New("TURNSTILE_SECRET_KEY is required when TURNSTILE_MODE=cloudflare")
+	}
+	switch c.RunnerMode {
+	case "disabled", "docker_trusted_admin":
+	default:
+		return errors.New("RUNNER_MODE must be one of: disabled, docker_trusted_admin")
 	}
 	return nil
 }
