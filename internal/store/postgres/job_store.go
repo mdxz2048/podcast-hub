@@ -52,6 +52,30 @@ func (s *JobStore) HasActiveJobForSource(ctx context.Context, sourceID string) (
 	return exists, nil
 }
 
+func (s *JobStore) ClaimNextQueuedJob(ctx context.Context) (jobs.ImportJob, bool, error) {
+	row := s.pool.QueryRow(ctx, `
+		UPDATE import_jobs
+		SET status='running', started_at=NOW(), updated_at=NOW()
+		WHERE id = (
+			SELECT id
+			FROM import_jobs
+			WHERE status='queued'
+			ORDER BY created_at ASC
+			FOR UPDATE SKIP LOCKED
+			LIMIT 1
+		)
+		RETURNING id::text, connector_source_id::text, connector_version_id::text, status, requested_by::text, trigger_type, auth_mode, execution_mode, started_at, finished_at, timeout_at, cancellation_requested_at, failure_code, failure_message_redacted, created_at, updated_at
+	`)
+	item, err := scanJob(row)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return jobs.ImportJob{}, false, nil
+		}
+		return jobs.ImportJob{}, false, fmt.Errorf("claim queued job: %w", err)
+	}
+	return item, true, nil
+}
+
 func (s *JobStore) CreateJob(ctx context.Context, job jobs.ImportJob) (jobs.ImportJob, error) {
 	var requestedBy any
 	if job.RequestedBy != nil && *job.RequestedBy != "" {
@@ -120,6 +144,17 @@ func (s *JobStore) ListJobArtifacts(ctx context.Context, jobID string) ([]jobs.I
 		items = append(items, item)
 	}
 	return items, nil
+}
+
+func (s *JobStore) InsertJobArtifact(ctx context.Context, artifact jobs.ImportJobArtifact) error {
+	_, err := s.pool.Exec(ctx, `
+		INSERT INTO import_job_artifacts(id, import_job_id, artifact_type, relative_path, size_bytes, sha256, created_at)
+		VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7)
+	`, artifact.ID, artifact.ImportJobID, artifact.ArtifactType, artifact.RelativePath, artifact.SizeBytes, artifact.SHA256, artifact.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("insert job artifact: %w", err)
+	}
+	return nil
 }
 
 func scanJob(row interface{ Scan(dest ...any) error }) (jobs.ImportJob, error) {

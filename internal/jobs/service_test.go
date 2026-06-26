@@ -237,6 +237,18 @@ func (m *memoryJobStore) HasActiveJobForSource(_ context.Context, sourceID strin
 	}
 	return false, nil
 }
+func (m *memoryJobStore) ClaimNextQueuedJob(context.Context) (ImportJob, bool, error) {
+	for id, job := range m.byID {
+		if job.Status == JobStatusQueued {
+			now := time.Now()
+			job.Status = JobStatusRunning
+			job.StartedAt = &now
+			m.byID[id] = job
+			return job, true, nil
+		}
+	}
+	return ImportJob{}, false, nil
+}
 func (m *memoryJobStore) CreateJob(_ context.Context, job ImportJob) (ImportJob, error) {
 	m.byID[job.ID] = job
 	return job, nil
@@ -279,6 +291,10 @@ func (m *memoryJobStore) ListJobArtifacts(_ context.Context, jobID string) ([]Im
 		}
 	}
 	return items, nil
+}
+func (m *memoryJobStore) InsertJobArtifact(_ context.Context, artifact ImportJobArtifact) error {
+	m.artifacts = append(m.artifacts, artifact)
+	return nil
 }
 
 type memoryConnectorStoreForJobs struct {

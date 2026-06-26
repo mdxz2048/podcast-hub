@@ -48,6 +48,42 @@ func (s *Service) ListArtifacts(ctx context.Context, jobID string) ([]ImportJobA
 	return s.store.ListJobArtifacts(ctx, jobID)
 }
 
+func (s *Service) ClaimNextQueuedJob(ctx context.Context) (ImportJob, bool, error) {
+	job, found, err := s.store.ClaimNextQueuedJob(ctx)
+	if err != nil {
+		return ImportJob{}, false, fmt.Errorf("claim queued job: %w", err)
+	}
+	if !found {
+		return ImportJob{}, false, nil
+	}
+	now := time.Now()
+	_ = s.store.InsertJobEvent(ctx, ImportJobEvent{ID: uuid.NewString(), ImportJobID: job.ID, EventType: "runner.claimed", Level: "info", MessageRedacted: "Runner claimed import job.", MetadataRedacted: `{}`, CreatedAt: now})
+	return job, true, nil
+}
+
+func (s *Service) AppendEvent(ctx context.Context, event ImportJobEvent) error {
+	if event.ID == "" {
+		event.ID = uuid.NewString()
+	}
+	if event.CreatedAt.IsZero() {
+		event.CreatedAt = time.Now()
+	}
+	if event.MetadataRedacted == "" {
+		event.MetadataRedacted = `{}`
+	}
+	return s.store.InsertJobEvent(ctx, event)
+}
+
+func (s *Service) AppendArtifact(ctx context.Context, artifact ImportJobArtifact) error {
+	if artifact.ID == "" {
+		artifact.ID = uuid.NewString()
+	}
+	if artifact.CreatedAt.IsZero() {
+		artifact.CreatedAt = time.Now()
+	}
+	return s.store.InsertJobArtifact(ctx, artifact)
+}
+
 func (s *Service) CreateManualJob(ctx context.Context, sourceID string, requestedBy *string) (ImportJob, error) {
 	detail, err := s.sourceSvc.ValidateRunnableSource(ctx, sourceID)
 	if err != nil {

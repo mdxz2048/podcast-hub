@@ -146,6 +146,18 @@ func (s *jobAPIJobStore) HasActiveJobForSource(_ context.Context, sourceID strin
 	}
 	return false, nil
 }
+func (s *jobAPIJobStore) ClaimNextQueuedJob(context.Context) (jobs.ImportJob, bool, error) {
+	for id, job := range s.byID {
+		if job.Status == jobs.JobStatusQueued {
+			now := time.Now()
+			job.Status = jobs.JobStatusRunning
+			job.StartedAt = &now
+			s.byID[id] = job
+			return job, true, nil
+		}
+	}
+	return jobs.ImportJob{}, false, nil
+}
 func (s *jobAPIJobStore) CreateJob(_ context.Context, job jobs.ImportJob) (jobs.ImportJob, error) {
 	s.byID[job.ID] = job
 	return job, nil
@@ -173,6 +185,9 @@ func (s *jobAPIJobStore) InsertJobEvent(_ context.Context, event jobs.ImportJobE
 }
 func (s *jobAPIJobStore) ListJobArtifacts(context.Context, string) ([]jobs.ImportJobArtifact, error) {
 	return []jobs.ImportJobArtifact{}, nil
+}
+func (s *jobAPIJobStore) InsertJobArtifact(context.Context, jobs.ImportJobArtifact) error {
+	return nil
 }
 
 type jobAPIConnectorStore struct {

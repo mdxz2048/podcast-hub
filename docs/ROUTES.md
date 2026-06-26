@@ -44,8 +44,8 @@ Account and admin identity routes are connected to real backend APIs. Connector 
 | `/admin/sources/new` | Connector Source create | M1.1B | Creates draft Source from active approved ConnectorVersion only. |
 | `/admin/sources/:sourceId` | Connector Source detail | M1.1B | Shows Secret binding state only, never Secret values. |
 | `/admin/secrets` | Secret metadata | M1.1B | Encrypted Secret write and metadata list; no read-value API. |
-| `/admin/import-jobs` | Import job list | M1.2A | Real Import Job metadata list; no fake jobs or Program/Episode output. |
-| `/admin/import-jobs/:jobId` | Import job detail | M1.2A | Real Job metadata, redacted events, artifact metadata, and cancel action. |
+| `/admin/import-jobs` | Import job list | M1.2B | Real Import Job metadata list; no fake jobs or Program/Episode output. |
+| `/admin/import-jobs/:jobId` | Import job detail | M1.2B | Real Job metadata, redacted events, artifact metadata, and cancel action. |
 | `/admin/reviews` | Review queue | M0.2B | Static review queue with Drawer details and confirmation Dialogs. |
 | `/admin/publications` | Publications | M0.2 | Static RSS publication state. |
 | `/admin/users` | Users and access | M0.2B | Static user/access view; no invitations or real user management in M0. |
@@ -93,6 +93,8 @@ Additional real admin Import Job APIs in M1.2A:
 - `GET /admin/import-jobs/{jobId}/events`
 - `GET /admin/import-jobs/{jobId}/artifacts`
 - `POST /admin/import-jobs/{jobId}/cancel`
+
+M1.2B adds the independent `cmd/runner` process and does not add user-facing routes. Existing Import Job APIs continue to return metadata only: no Secret values, no package content, no absolute paths, no Artifact file contents, no media download, and no RSS publication actions.
 
 ## 5. Route Guard States
 

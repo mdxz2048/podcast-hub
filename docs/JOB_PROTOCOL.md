@@ -4,7 +4,7 @@
 
 The Job Protocol defines how the platform communicates with Connectors and how Connectors return events and outputs.
 
-Status in M1.1B: protocol definition only. Source and Secret Reference data exist, but Connector execution and ImportJob creation are still not implemented.
+Status in M1.2B: Import Jobs can be created through admin APIs, and the independent Runner can execute only a test fixture subprocess to validate the protocol. Docker execution, real external Connectors, duoting, scheduled Jobs, interactive/QR Jobs, Program/Episode staging, and RSS publication are not implemented.
 
 The protocol is intentionally file and stream based:
 
@@ -13,10 +13,12 @@ The protocol is intentionally file and stream based:
 - Connector writes standardized episode JSON files and allowed artifacts to its assigned output directory.
 - Connector exits after one import attempt.
 
-M1.1B non-goal reminder:
+M1.2B non-goal reminder:
 
-- Platform does not run connector code yet.
-- Platform does not create ImportJob from uploaded package or Source yet.
+- API service does not run connector code.
+- Runner does not run Docker yet.
+- Runner does not run real external Connectors.
+- Fixture execution is limited to protocol tests and explicit local runner mode.
 
 ## 2. Protocol Guarantees
 
@@ -130,57 +132,50 @@ Example:
 
 Each stdout line must be a complete JSON object.
 
-Common envelope:
+M1.2B supported event shape:
 
 ```json
 {
-  "schema_version": "1.0",
-  "event_id": "evt_01JZ7Y75EBC8G6NTKZR4B8S9PM",
-  "job_id": "job_01JZ7Y5F1J6Q0AZR4V0N7E8E9A",
-  "time": "2026-06-26T07:31:02Z",
+  "type": "log",
   "level": "info",
-  "type": "job.started",
-  "message": "Connector started."
+  "message": "Connector started.",
+  "metadata": {
+    "step": "start"
+  }
 }
 ```
 
 ### 4.1 Event Types
 
-Required event types:
+M1.2B supports only:
 
-- `job.started`
-- `job.progress`
-- `episode.discovered`
-- `episode.output_written`
-- `job.completed`
+- `log`
+- `progress`
+- `artifact_ready`
+- `completed`
+- `failed`
 
-Conditional event types:
+Rules enforced by the Runner:
 
-- `auth.qr_required`
-- `auth.waiting`
-- `auth.succeeded`
-- `auth.failed`
-- `warning`
-- `error`
-- `rate_limited`
-- `output.summary`
+- Each stdout line must be valid JSON.
+- Unknown event types fail the Job.
+- A Job must emit exactly one terminal event: `completed` or `failed`.
+- Events after a terminal event fail the Job.
+- `completed` requires exit code `0`.
+- `failed` requires non-zero exit code.
+- Single-line length, total stdout size, and event count limits are enforced.
+- Event messages and metadata receive a second redaction pass before persistence.
 
 ### 4.2 Event Examples
 
 ```jsonl
-{"schema_version":"1.0","event_id":"evt_001","job_id":"job_01JZ7Y5F1J6Q0AZR4V0N7E8E9A","time":"2026-06-26T07:31:00Z","level":"info","type":"job.started","message":"Connector started."}
-{"schema_version":"1.0","event_id":"evt_002","job_id":"job_01JZ7Y5F1J6Q0AZR4V0N7E8E9A","time":"2026-06-26T07:31:05Z","level":"info","type":"job.progress","message":"Fetching episode index.","data":{"step":"fetch_index","current":1,"total":4}}
-{"schema_version":"1.0","event_id":"evt_003","job_id":"job_01JZ7Y5F1J6Q0AZR4V0N7E8E9A","time":"2026-06-26T07:31:20Z","level":"info","type":"episode.discovered","message":"Episode discovered.","data":{"source_episode_id":"ep-1001","title":"Pilot Episode"}}
-{"schema_version":"1.0","event_id":"evt_004","job_id":"job_01JZ7Y5F1J6Q0AZR4V0N7E8E9A","time":"2026-06-26T07:31:35Z","level":"info","type":"episode.output_written","message":"Episode output written.","data":{"path":"episodes/episode-001.json"}}
-{"schema_version":"1.0","event_id":"evt_005","job_id":"job_01JZ7Y5F1J6Q0AZR4V0N7E8E9A","time":"2026-06-26T07:31:40Z","level":"info","type":"job.completed","message":"Connector completed.","data":{"episodes":1,"warnings":0}}
+{"type":"log","level":"info","message":"Connector started."}
+{"type":"progress","level":"info","message":"Fetching episode index.","metadata":{"step":"fetch_index","current":1,"total":4}}
+{"type":"artifact_ready","level":"info","artifact_type":"episode_metadata","path":"episodes/episode-001.json"}
+{"type":"completed","level":"info","message":"Connector completed."}
 ```
 
-QR example:
-
-```jsonl
-{"schema_version":"1.0","event_id":"evt_qr_001","job_id":"job_01JZ7Y8T4D9WF7S1YC0TYP8JSC","time":"2026-06-26T08:00:00Z","level":"info","type":"auth.qr_required","message":"QR authentication required.","data":{"qr_ref":"qr_ref_01JZ7Y8YY7B6QQMS5C8DZ7B72N","expires_at":"2026-06-26T08:05:00Z"}}
-{"schema_version":"1.0","event_id":"evt_qr_002","job_id":"job_01JZ7Y8T4D9WF7S1YC0TYP8JSC","time":"2026-06-26T08:01:12Z","level":"info","type":"auth.succeeded","message":"Interactive authentication completed."}
-```
+QR events are out of scope in M1.2B.
 
 ### 4.3 Event Redaction
 
@@ -197,6 +192,18 @@ Events must not include:
 The platform should apply a second redaction pass before persistence and display.
 
 ## 5. Episode Output JSON
+
+M1.2B does not stage Imported Episodes. The Runner only validates declared Artifact files and persists Artifact metadata.
+
+Artifact rules:
+
+- Every output file must be declared by an `artifact_ready` event.
+- Artifact paths must be relative paths under `/work/output`.
+- Absolute paths and path traversal are rejected.
+- Symlinks, directories, sockets, FIFOs, and device files are rejected.
+- Artifact count, single-file size, and total output size limits are enforced.
+- Duplicate Artifact paths are rejected.
+- Stored metadata contains only relative path, size, SHA-256, and artifact type.
 
 Each episode output file represents one staged episode candidate.
 

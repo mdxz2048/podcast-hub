@@ -104,6 +104,17 @@ Owns Import Job lifecycle:
 
 Executes a Connector in a restricted environment.
 
+M1.2B introduces the Runner protocol boundary without Docker. The API service creates and exposes Import Job metadata only. A separate `cmd/runner` can claim one queued Job in explicit `RUNNER_MODE=fixture_subprocess` mode, write `/work/input/job.json`, execute a test fixture subprocess, parse stdout JSON Lines, validate declared output artifacts, persist redacted Job Events and Artifact metadata, then clean its workspace.
+
+M1.2B Runner boundaries:
+
+- Fixture execution only; no real duoting or external Connector execution.
+- No Docker, Docker socket, container runtime, scheduled runner loop, QR, or interactive job support.
+- `job.json` contains job/source/connector identifiers and policy metadata only; it must not contain Secret values.
+- API service does not execute Connector code, read runner workspaces, read Secret plaintext, or call Docker.
+- Artifacts are metadata only: relative path, size, SHA-256, and artifact type.
+- Internal workspace paths and file contents are not returned by API responses.
+
 Required properties:
 
 - Non-root user.
