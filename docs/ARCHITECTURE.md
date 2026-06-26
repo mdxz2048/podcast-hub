@@ -511,3 +511,11 @@ Logs must be structured and redacted.
 - Secret values are encrypted with AES-GCM and exposed only as metadata plus binding state.
 - Alpha supports only manual + none/reusable_session + unattended Source creation.
 - Connector execution, ImportJob creation, staging review, RSS, scheduled jobs, interactive/QR jobs, real duoting, untrusted Connector isolation, and production deployment remain outside this phase.
+
+## M1.2A Import Job Lifecycle Increment
+
+- Added `import_jobs`, `import_job_events`, and `import_job_artifacts`.
+- Import Jobs are admin-created metadata records tied to an active Source and approved ConnectorVersion.
+- M1.2A validates Source, Connector, Version, Secret binding, manual trigger, and one-active-job-per-Source rules before queueing.
+- M1.2A does not execute Connector code, does not call Docker, and does not create Program, Episode, RSS, or user-visible media.
+- Running cancellation records `cancellation_requested_at`; actual process termination is deferred to Runner phases.

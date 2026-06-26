@@ -169,6 +169,42 @@ func (s *Service) DisableSource(ctx context.Context, sourceID string, actorUserI
 	return s.detailForSource(ctx, source)
 }
 
+func (s *Service) ValidateRunnableSource(ctx context.Context, sourceID string) (ConnectorSourceDetail, error) {
+	source, found, err := s.store.GetSource(ctx, sourceID)
+	if err != nil {
+		return ConnectorSourceDetail{}, fmt.Errorf("get source: %w", err)
+	}
+	if !found {
+		return ConnectorSourceDetail{}, ErrSourceNotFound
+	}
+	if source.Status != SourceStatusActive || source.TriggerType != "manual" || source.ExecutionMode != "unattended" {
+		return ConnectorSourceDetail{}, ErrUnsupportedAlphaMode
+	}
+	if source.AuthMode != "none" && source.AuthMode != "reusable_session" {
+		return ConnectorSourceDetail{}, ErrUnsupportedAlphaMode
+	}
+	detail, err := s.detailForSource(ctx, source)
+	if err != nil {
+		return ConnectorSourceDetail{}, err
+	}
+	if len(detail.MissingSecrets) > 0 {
+		return ConnectorSourceDetail{}, ErrMissingRequiredSecrets
+	}
+	for _, binding := range detail.SecretBindings {
+		secret, found, err := s.store.GetSecret(ctx, binding.SecretRecordID)
+		if err != nil {
+			return ConnectorSourceDetail{}, fmt.Errorf("get secret: %w", err)
+		}
+		if !found {
+			return ConnectorSourceDetail{}, ErrSecretNotFound
+		}
+		if secret.RevokedAt != nil {
+			return ConnectorSourceDetail{}, ErrSecretRevoked
+		}
+	}
+	return detail, nil
+}
+
 func (s *Service) ListSecrets(ctx context.Context) ([]SecretRecord, error) {
 	return s.store.ListSecrets(ctx)
 }

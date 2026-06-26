@@ -170,7 +170,7 @@ func newConnectorTestServerWithStore(t *testing.T) (*Server, *httpMemoryConnecto
 	}
 	store := newHTTPMemoryConnectorStore()
 	service := connectors.NewService(store, newHTTPMemoryPackageStore())
-	return NewServer(cfg, nil, nil, HealthDependencies{}, service, nil), store
+	return NewServer(cfg, nil, nil, HealthDependencies{}, service, nil, nil), store
 }
 
 func newAdminConnectorTestServer(t *testing.T) *Server {

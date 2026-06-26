@@ -66,6 +66,7 @@ async function mockConnectorAdminApi(page: Page) {
     missing_secrets: ["session_file"]
   };
   const secrets = [{ id: "secret-1", name: "Session file", secret_type: "file", encryption_version: "aes-gcm-v1", created_at: "2026-01-01T00:00:00Z", binding_count: 0 }];
+  const importJob = { id: "job-1", connector_source_id: "s1", connector_version_id: "v-approved", status: "queued", trigger_type: "manual", auth_mode: "reusable_session", execution_mode: "unattended", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" };
   await page.route("http://127.0.0.1:8080/admin/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -141,6 +142,26 @@ async function mockConnectorAdminApi(page: Page) {
     }
     if (request.method() === "POST" && url.pathname.endsWith("/admin/secrets/text")) {
       await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ secret: secrets[0] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ jobs: [] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-1")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ job: importJob }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-1/events")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ events: [{ id: "evt-1", import_job_id: "job-1", event_type: "job.queued", level: "info", message_redacted: "queued", metadata_redacted: "{}", created_at: "2026-01-01T00:00:00Z" }] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-1/artifacts")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ artifacts: [] }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/import-jobs/job-1/cancel")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ job: { ...importJob, status: "cancelled" } }) });
       return;
     }
     await route.fulfill({ status: 404, body: "not mocked" });
@@ -266,4 +287,17 @@ test("admin can create source from approved connector version", async ({ page })
   await expect(page.getByRole("button", { name: "Enable Source" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "运行" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "下载媒体" })).toHaveCount(0);
+});
+
+test("admin import jobs use real API metadata states", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+  await page.goto("/admin/import-jobs");
+  await expect(page.getByText("暂无 Import Job")).toBeVisible();
+  await page.goto("/admin/import-jobs/job-1");
+  await expect(page.getByText("job.queued")).toBeVisible();
+  await page.getByRole("button", { name: "取消任务" }).click();
+  await expect(page.getByText("取消请求已记录。")).toBeVisible();
+  await expect(page.getByText("发布")).toHaveCount(0);
+  await expect(page.getByText("RSS")).toHaveCount(0);
 });

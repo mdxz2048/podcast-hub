@@ -44,8 +44,8 @@ Account and admin identity routes are connected to real backend APIs. Connector 
 | `/admin/sources/new` | Connector Source create | M1.1B | Creates draft Source from active approved ConnectorVersion only. |
 | `/admin/sources/:sourceId` | Connector Source detail | M1.1B | Shows Secret binding state only, never Secret values. |
 | `/admin/secrets` | Secret metadata | M1.1B | Encrypted Secret write and metadata list; no read-value API. |
-| `/admin/import-jobs` | Import job list | M0.2B | Static job status list. |
-| `/admin/import-jobs/:jobId` | Import job detail | M0.2B | Static sanitized log, timeline, QR placeholder, and output summary. |
+| `/admin/import-jobs` | Import job list | M1.2A | Real Import Job metadata list; no fake jobs or Program/Episode output. |
+| `/admin/import-jobs/:jobId` | Import job detail | M1.2A | Real Job metadata, redacted events, artifact metadata, and cancel action. |
 | `/admin/reviews` | Review queue | M0.2B | Static review queue with Drawer details and confirmation Dialogs. |
 | `/admin/publications` | Publications | M0.2 | Static RSS publication state. |
 | `/admin/users` | Users and access | M0.2B | Static user/access view; no invitations or real user management in M0. |
@@ -84,6 +84,15 @@ Additional real admin Source and Secret APIs in M1.1B:
 - `POST /admin/secrets/{secretId}/revoke`
 - `POST /admin/sources/{sourceId}/secret-bindings`
 - `DELETE /admin/sources/{sourceId}/secret-bindings/{bindingId}`
+
+Additional real admin Import Job APIs in M1.2A:
+
+- `GET /admin/import-jobs`
+- `POST /admin/sources/{sourceId}/import-jobs`
+- `GET /admin/import-jobs/{jobId}`
+- `GET /admin/import-jobs/{jobId}/events`
+- `GET /admin/import-jobs/{jobId}/artifacts`
+- `POST /admin/import-jobs/{jobId}/cancel`
 
 ## 5. Route Guard States
 

@@ -1,46 +1,56 @@
-import { SlidersHorizontal } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Badge } from "../components/Badge";
-import { Button } from "../components/Button";
-import { ImportJobCard } from "../components/ImportJobCard";
-import { SearchBar, Select } from "../components/Form";
 import { PageHeader } from "../components/PageShell";
-import { jobs, programs, sources } from "../mock/data";
-import { authModeLabel, ingestionTypeLabel, jobStatusLabel, triggerTypeLabel } from "../utils/labels";
+import { EmptyState, ErrorState, LoadingState } from "../components/StateBlocks";
+import { listImportJobs } from "../api/jobs";
+import type { ImportJob } from "../api/jobs";
 
 export function AdminImportJobsPage() {
-  const [params] = useSearchParams();
-  const status = params.get("status") ?? "全部状态";
-  const visible = jobs.filter((job) => status === "全部状态" || jobStatusLabel[job.status] === status);
+  const [jobs, setJobs] = useState<ImportJob[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    listImportJobs()
+      .then((result) => {
+        if (!cancelled) setJobs(result.jobs);
+      })
+      .catch(() => {
+        if (!cancelled) setError("无法加载 Import Job 列表。");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
-    <div>
-      <PageHeader eyebrow="导入任务" title="追踪每次导入、认证阻塞和审核入口">
-        <Button variant="secondary" icon={<SlidersHorizontal className="h-4 w-4" />}>筛选</Button>
-      </PageHeader>
-      <div className="mb-5 grid gap-3 rounded-lg border border-border bg-surface p-4 md:grid-cols-[1fr_220px]">
-        <SearchBar placeholder="搜索任务、节目或来源" />
-        <Select label="状态" defaultValue={status} options={["全部状态", "运行中", "等待授权", "等待人工上传", "等待审核", "已完成", "失败", "已取消"]} />
-      </div>
-      <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        {visible.map((job) => {
-          const program = programs.find((item) => item.id === job.programId);
-          const source = sources.find((item) => item.id === job.sourceId);
-          return (
-            <Link key={job.id} to={`/admin/import-jobs/${job.id}`}>
-              <div className="grid gap-3">
-                <ImportJobCard job={job} />
-                <div className="rounded-lg border border-border bg-subtle p-3 text-sm text-secondary">
-                  <div className="flex flex-wrap gap-2">
-                    <Badge>{program?.title ?? "未知节目"}</Badge>
-                    <Badge>{source?.name ?? "未知来源"}</Badge>
-                  </div>
-                  <p className="mt-2">{ingestionTypeLabel[job.ingestionType]} / {triggerTypeLabel[job.triggerType]} / {authModeLabel[job.authMode]}</p>
-                </div>
+    <div className="grid gap-6">
+      <PageHeader eyebrow="Import Jobs" title="手动导入任务" />
+      {loading ? <LoadingState title="正在加载 Import Job" /> : null}
+      {error ? <ErrorState title={error} /> : null}
+      {!loading && !error && jobs.length === 0 ? <EmptyState title="暂无 Import Job" /> : null}
+      <div className="grid gap-3">
+        {jobs.map((job) => (
+          <Link key={job.id} to={`/admin/import-jobs/${job.id}`} className="rounded-lg border border-border bg-surface p-5 shadow-subtle hover:border-strong">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="font-semibold">{job.id}</h2>
+                <p className="mt-1 text-sm text-secondary">Source {job.connector_source_id}</p>
               </div>
-            </Link>
-          );
-        })}
+              <Badge tone={job.status === "failed" || job.status === "cancelled" ? "danger" : job.status === "completed" ? "success" : "warning"}>{job.status}</Badge>
+            </div>
+            <div className="mt-4 grid gap-2 text-sm text-secondary md:grid-cols-3">
+              <span>Trigger: {job.trigger_type}</span>
+              <span>Auth: {job.auth_mode}</span>
+              <span>Execution: {job.execution_mode}</span>
+            </div>
+          </Link>
+        ))}
       </div>
     </div>
   );

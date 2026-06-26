@@ -6,7 +6,10 @@
 - M1.0C: **Completed**
 - M1.1A: **Completed** (generic Connector Registry upload, static validation, version review, enable/disable)
 - M1.1B: **Completed** (Connector Source instances, encrypted Secret records, Secret Reference bindings)
-- M1.2: **Not Started**
+- M1.2A: **Completed** (ImportJob lifecycle, admin APIs, precondition checks, cancellation state rules)
+- M1.2B: **Not Started**
+- M1.2C: **Not Started**
+- M1.2D: **Not Started**
 
 ## Clarifications
 

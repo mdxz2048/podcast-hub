@@ -16,6 +16,7 @@ import (
 	"github.com/mdxz2048/podcast-hub/config"
 	"github.com/mdxz2048/podcast-hub/internal/auth"
 	"github.com/mdxz2048/podcast-hub/internal/connectors"
+	"github.com/mdxz2048/podcast-hub/internal/jobs"
 	"github.com/mdxz2048/podcast-hub/internal/security"
 	"github.com/mdxz2048/podcast-hub/internal/sources"
 )
@@ -27,6 +28,7 @@ type Server struct {
 	health           HealthDependencies
 	connectors       *connectors.Service
 	sources          *sources.Service
+	jobs             *jobs.Service
 	resolveSessionFn func(ctx context.Context, token string) (auth.Session, auth.User, error)
 }
 
@@ -45,7 +47,7 @@ type HealthDependencies struct {
 	SMTPPort int
 }
 
-func NewServer(cfg config.Config, authService *auth.Service, turnstile security.TurnstileVerifier, health HealthDependencies, connectorService *connectors.Service, sourceService *sources.Service) *Server {
+func NewServer(cfg config.Config, authService *auth.Service, turnstile security.TurnstileVerifier, health HealthDependencies, connectorService *connectors.Service, sourceService *sources.Service, jobService *jobs.Service) *Server {
 	return &Server{
 		cfg:        cfg,
 		auth:       authService,
@@ -53,6 +55,7 @@ func NewServer(cfg config.Config, authService *auth.Service, turnstile security.
 		health:     health,
 		connectors: connectorService,
 		sources:    sourceService,
+		jobs:       jobService,
 	}
 }
 
@@ -105,6 +108,12 @@ func (s *Server) Router() stdhttp.Handler {
 		r.Post("/secrets/{secretId}/revoke", s.handleAdminSecretRevoke)
 		r.Post("/sources/{sourceId}/secret-bindings", s.handleAdminSourceSecretBind)
 		r.Delete("/sources/{sourceId}/secret-bindings/{bindingId}", s.handleAdminSourceSecretUnbind)
+		r.Get("/import-jobs", s.handleAdminImportJobs)
+		r.Post("/sources/{sourceId}/import-jobs", s.handleAdminImportJobCreate)
+		r.Get("/import-jobs/{jobId}", s.handleAdminImportJob)
+		r.Get("/import-jobs/{jobId}/events", s.handleAdminImportJobEvents)
+		r.Get("/import-jobs/{jobId}/artifacts", s.handleAdminImportJobArtifacts)
+		r.Post("/import-jobs/{jobId}/cancel", s.handleAdminImportJobCancel)
 	})
 	return router
 }
