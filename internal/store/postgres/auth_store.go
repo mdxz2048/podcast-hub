@@ -346,6 +346,71 @@ func (s *AuthStore) InsertAuditLog(ctx context.Context, event auth.AuditEvent) e
 	return nil
 }
 
+func (s *AuthStore) CreateAdminUser(ctx context.Context, email, passwordHash string, now time.Time) (auth.User, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return auth.User{}, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	userID := uuid.New()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO users(id, email_normalized, role, status, verified_at, created_at, updated_at)
+		VALUES ($1, $2, 'admin', 'active', $3, $3, $3)
+	`, userID, email, now); err != nil {
+		return auth.User{}, fmt.Errorf("insert admin user: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO user_credentials(user_id, password_hash, password_hash_algorithm, password_updated_at, failed_login_count)
+		VALUES ($1, $2, 'argon2id', $3, 0)
+	`, userID, passwordHash, now); err != nil {
+		return auth.User{}, fmt.Errorf("insert admin credential: %w", err)
+	}
+	user, err := s.getUserByIDTx(ctx, tx, userID.String())
+	if err != nil {
+		return auth.User{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return auth.User{}, fmt.Errorf("commit create admin: %w", err)
+	}
+	return user, nil
+}
+
+func (s *AuthStore) PromoteUserToAdmin(ctx context.Context, userID, passwordHash string, now time.Time) (auth.User, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return auth.User{}, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	tag, err := tx.Exec(ctx, `
+		UPDATE users
+		SET role='admin', status='active', verified_at=COALESCE(verified_at, $1), updated_at=$1
+		WHERE id=$2::uuid
+	`, now, userID)
+	if err != nil {
+		return auth.User{}, fmt.Errorf("promote user role: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return auth.User{}, auth.ErrAccountUnavailable
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE user_credentials
+		SET password_hash=$1, password_hash_algorithm='argon2id', password_updated_at=$2, failed_login_count=0, locked_until=NULL
+		WHERE user_id=$3::uuid
+	`, passwordHash, now, userID); err != nil {
+		return auth.User{}, fmt.Errorf("update promoted credential: %w", err)
+	}
+	user, err := s.getUserByIDTx(ctx, tx, userID)
+	if err != nil {
+		return auth.User{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return auth.User{}, fmt.Errorf("commit promote admin: %w", err)
+	}
+	return user, nil
+}
+
 func (s *AuthStore) getUserByIDTx(ctx context.Context, tx pgx.Tx, userID string) (auth.User, error) {
 	return scanUser(tx.QueryRow(ctx, `
 		SELECT id::text, email_normalized, display_name, role, status, created_at, updated_at, verified_at, deleted_at

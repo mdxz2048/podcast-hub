@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/mdxz2048/podcast-hub/config"
 	"github.com/mdxz2048/podcast-hub/internal/auth"
@@ -17,16 +19,34 @@ import (
 )
 
 type Server struct {
-	cfg       config.Config
-	auth      *auth.Service
-	turnstile security.TurnstileVerifier
+	cfg              config.Config
+	auth             *auth.Service
+	turnstile        security.TurnstileVerifier
+	health           HealthDependencies
+	resolveSessionFn func(ctx context.Context, token string) (auth.Session, auth.User, error)
 }
 
-func NewServer(cfg config.Config, authService *auth.Service, turnstile security.TurnstileVerifier) *Server {
+type DBPinger interface {
+	Ping(ctx context.Context) error
+}
+
+type RedisPinger interface {
+	Ping(ctx context.Context) *redis.StatusCmd
+}
+
+type HealthDependencies struct {
+	DB       DBPinger
+	Redis    RedisPinger
+	SMTPHost string
+	SMTPPort int
+}
+
+func NewServer(cfg config.Config, authService *auth.Service, turnstile security.TurnstileVerifier, health HealthDependencies) *Server {
 	return &Server{
 		cfg:       cfg,
 		auth:      authService,
 		turnstile: turnstile,
+		health:    health,
 	}
 }
 
@@ -51,6 +71,12 @@ func (s *Server) Router() stdhttp.Handler {
 		r.Post("/password-reset/request", s.handlePasswordResetRequest)
 		r.Post("/password-reset/verify", s.handlePasswordResetVerify)
 		r.Get("/me", s.handleMe)
+	})
+	router.Route("/admin", func(r chi.Router) {
+		r.Use(s.RequireAuth)
+		r.Use(s.RequireAdmin)
+		r.Get("/me", s.handleAdminMe)
+		r.Get("/system/status", s.handleAdminSystemStatus)
 	})
 	return router
 }
@@ -125,6 +151,13 @@ func mapAuthError(err error) (int, string, string) {
 func (s *Server) writeAuthError(w stdhttp.ResponseWriter, r *stdhttp.Request, err error) {
 	status, code, message := mapAuthError(err)
 	writeError(w, r, status, code, message)
+}
+
+func (s *Server) resolveSession(ctx context.Context, token string) (auth.Session, auth.User, error) {
+	if s.resolveSessionFn != nil {
+		return s.resolveSessionFn(ctx, token)
+	}
+	return s.auth.ResolveSession(ctx, token)
 }
 
 func (s *Server) parseJSONBody(r *stdhttp.Request, target any) error {

@@ -63,7 +63,12 @@ func main() {
 		CodeMaxAttempts:  5,
 		ResetMaxAttempts: 5,
 	})
-	server := httpserver.NewServer(cfg, authService, turnstileVerifier)
+	server := httpserver.NewServer(cfg, authService, turnstileVerifier, httpserver.HealthDependencies{
+		DB:       dbPool,
+		Redis:    redisClient,
+		SMTPHost: cfg.SMTPHost,
+		SMTPPort: cfg.SMTPPort,
+	})
 	httpSrv := &stdhttp.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           server.Router(),

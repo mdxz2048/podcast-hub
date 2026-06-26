@@ -198,7 +198,7 @@ func (s *Server) handleMe(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 		s.writeAuthError(w, r, auth.ErrNotAuthenticated)
 		return
 	}
-	_, user, err := s.auth.ResolveSession(r.Context(), sessionCookie.Value)
+	_, user, err := s.resolveSession(r.Context(), sessionCookie.Value)
 	if err != nil {
 		s.writeAuthError(w, r, err)
 		return

@@ -2,9 +2,9 @@
 
 ## 1. Scope
 
-This document defines frontend routes after M1.0 authentication integration.
+This document defines frontend routes after M1.0 and M1.0C authentication/admin integration.
 
-Only account-related routes are connected to real backend APIs in M1.0. Program, collection, admin workflow, RSS, and Connector pages remain Mock-data driven.
+Account and admin identity routes are connected to real backend APIs. Program, collection, admin business workflow, RSS, and Connector pages remain Mock-data driven.
 
 ## 2. Public Routes
 
@@ -13,7 +13,7 @@ Only account-related routes are connected to real backend APIs in M1.0. Program,
 | `/` | Home | M0.1 | Static product home with content-led visual direction. |
 | `/register` | Register | M1.0 | Real `POST /auth/register/request-code` + Turnstile token submit. |
 | `/register/verify` | Email verification | M1.0 | Real `POST /auth/register/verify-code`, success creates cookie session. |
-| `/login` | Login | M1.0 | Real `POST /auth/login`; generic failure copy to avoid enumeration. |
+| `/login` | Login | M1.0C | Real `POST /auth/login`; admin and user share this route and role-based redirect. |
 | `/forgot-password` | Password reset | M1.0 | Real `POST /auth/password-reset/request` and `POST /auth/password-reset/verify`. |
 | `/reset-password` | Password reset verify | M1.0 | Real reset verification form (`code + new password`) calling `POST /auth/password-reset/verify`. |
 
@@ -49,15 +49,16 @@ Only account-related routes are connected to real backend APIs in M1.0. Program,
 | `/admin/audit` | Audit log | M0.2 | Static audit list. |
 | `/admin/settings` | Settings | M0.2 | Static settings view. |
 
+Related real admin APIs in M1.0C:
+
+- `GET /admin/me`
+- `GET /admin/system/status`
+
 ## 5. Route Guard States
 
-M0 static pages should include Mock route guard states:
+Route guard behavior in M1.0C:
 
-- Public allowed.
-- Authenticated user.
-- Admin required.
-- Permission denied.
-- Suspended user.
-- Deleted user.
-
-No real route guard is implemented in M0.1.
+- `/admin/*` unauthenticated: redirect to `/login`.
+- `/admin/*` authenticated `user`: render Permission Denied.
+- `/admin/*` authenticated `admin`: allow access.
+- Backend `RequireAdmin` enforces 401/403 regardless of frontend route state.

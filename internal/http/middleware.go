@@ -1,12 +1,17 @@
 package http
 
 import (
+	"context"
 	stdhttp "net/http"
 	"net/url"
 	"strings"
 
 	"github.com/mdxz2048/podcast-hub/internal/auth"
 )
+
+type contextKey string
+
+const authUserContextKey contextKey = "auth_user"
 
 func (s *Server) corsMiddleware(next stdhttp.Handler) stdhttp.Handler {
 	return stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
@@ -73,4 +78,44 @@ func (s *Server) validateCSRFFromCookie(r *stdhttp.Request) error {
 		return auth.ErrForbiddenCSRF
 	}
 	return nil
+}
+
+func (s *Server) RequireAuth(next stdhttp.Handler) stdhttp.Handler {
+	return stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+		sessionCookie, err := r.Cookie(s.cfg.SessionCookieName)
+		if err != nil {
+			s.writeAuthError(w, r, auth.ErrNotAuthenticated)
+			return
+		}
+		_, user, err := s.resolveSession(r.Context(), sessionCookie.Value)
+		if err != nil {
+			s.writeAuthError(w, r, err)
+			return
+		}
+		ctx := context.WithValue(r.Context(), authUserContextKey, user)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (s *Server) RequireAdmin(next stdhttp.Handler) stdhttp.Handler {
+	return stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+		user, ok := authUserFromContext(r.Context())
+		if !ok {
+			s.writeAuthError(w, r, auth.ErrNotAuthenticated)
+			return
+		}
+		if user.Role != auth.RoleAdmin {
+			writeError(w, r, stdhttp.StatusForbidden, "forbidden", "当前账号无权限访问该资源。")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func authUserFromContext(ctx context.Context) (auth.User, bool) {
+	user, ok := ctx.Value(authUserContextKey).(auth.User)
+	if !ok {
+		return auth.User{}, false
+	}
+	return user, true
 }

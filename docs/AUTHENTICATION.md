@@ -18,6 +18,8 @@ Rules:
 - Public administrator registration is not allowed.
 - A newly registered account is always `user`.
 - `admin` can be created only during trusted system initialization or granted by an existing authorized administrator.
+- M1.0C provides local bootstrap via CLI only: `go run ./cmd/admin seed --email admin@example.invalid`.
+- No public HTTP API may create or upgrade admin accounts.
 - Role changes must be audited.
 - Role checks must happen on the server side for every protected API.
 - `System Owner`, `Operator`, and `Reviewer` are not separate account roles; they are admin responsibility labels or permission profiles.
@@ -735,7 +737,56 @@ Must not reveal:
 - Password hash.
 - Other users' data.
 
-### 12.9 `GET /account/sessions`
+### 12.9 `GET /admin/me`
+
+Purpose:
+
+- Return minimal current admin identity for backend permission verification.
+
+Success response:
+
+```json
+{
+  "admin": {
+    "id": "user_01JZ8A33333333333333333333",
+    "email": "admin@example.invalid",
+    "role": "admin",
+    "status": "active"
+  }
+}
+```
+
+Permission:
+
+- Admin only.
+
+Failure:
+
+- `not_authenticated` (401)
+- `forbidden` (403)
+- `account_unavailable` (403)
+
+### 12.10 `GET /admin/system/status`
+
+Purpose:
+
+- Verify admin permission chain and dependency health summary.
+
+Behavior:
+
+- development: returns minimal health summary for API/database/redis/mail.
+- production: returns restricted minimal status only.
+
+Permission:
+
+- Admin only.
+
+Failure:
+
+- `not_authenticated` (401)
+- `forbidden` (403)
+
+### 12.11 `GET /account/sessions`
 
 Purpose:
 
@@ -785,7 +836,7 @@ Must not reveal:
 - Raw IP addresses if policy requires coarse summaries.
 - Other users' sessions.
 
-### 12.10 `DELETE /account/sessions/{id}`
+### 12.12 `DELETE /account/sessions/{id}`
 
 Purpose:
 

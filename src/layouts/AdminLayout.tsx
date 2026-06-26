@@ -1,5 +1,7 @@
 import { Activity, ClipboardList, Library, RadioTower, Settings, ShieldCheck, UsersRound } from "lucide-react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthProvider";
+import { Button } from "../components/Button";
 
 const nav = [
   { to: "/admin", label: "概览", icon: Activity },
@@ -12,6 +14,9 @@ const nav = [
 ];
 
 export function AdminLayout() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-canvas lg:grid lg:grid-cols-[248px_1fr]">
       <aside className="border-b border-border bg-surface lg:min-h-screen lg:border-b-0 lg:border-r">
@@ -22,7 +27,20 @@ export function AdminLayout() {
             </span>
             管理后台
           </div>
-          <p className="hidden pt-2 text-xs text-muted lg:block">M0.1 静态工作区</p>
+          <p className="hidden pt-2 text-xs text-muted lg:block">管理员权限链路验证页</p>
+        </div>
+        <div className="px-5 pb-3 text-xs text-secondary lg:pt-1">
+          <div className="truncate">当前管理员：{user?.email ?? "未识别"}</div>
+          <Button
+            type="button"
+            variant="ghost"
+            className="mt-2 h-8 px-2 text-xs"
+            onClick={() => {
+              void logout().then(() => navigate("/login"));
+            }}
+          >
+            退出登录
+          </Button>
         </div>
         <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:grid lg:px-3 lg:pb-0">
           {nav.map((item) => {

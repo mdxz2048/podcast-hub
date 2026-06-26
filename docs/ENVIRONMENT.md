@@ -40,6 +40,7 @@ Forbidden in Git:
 - `SMTP_USERNAME`
 - `SMTP_PASSWORD`
 - `SMTP_FROM`
+- `ADMIN_SEED_PASSWORD` (optional, local admin seed CLI only)
 
 ## 4. Production fail-closed rules
 
@@ -79,4 +80,19 @@ go run ./cmd/api
 ```bash
 corepack pnpm install
 corepack pnpm dev
+```
+
+## 7. Local admin bootstrap
+
+Use the shared login flow with an admin account seeded locally (no HTTP admin registration endpoint):
+
+```bash
+export ADMIN_SEED_PASSWORD='replace-with-strong-password'
+go run ./cmd/admin seed --email admin@example.invalid
+```
+
+Development-only promotion of an existing user:
+
+```bash
+go run ./cmd/admin seed --email user@example.invalid --promote
 ```

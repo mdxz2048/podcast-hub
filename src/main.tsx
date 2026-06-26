@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { AdminRouteGuard } from "./auth/AdminRouteGuard";
 import { AuthProvider } from "./auth/AuthProvider";
 import { AdminLayout } from "./layouts/AdminLayout";
 import { PublicLayout } from "./layouts/PublicLayout";
@@ -53,7 +54,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/collections/:collectionId" element={<CollectionEditorPage />} />
               <Route path="/collections/:collectionId/subscribe" element={<SubscribePage />} />
             </Route>
-            <Route path="/admin" element={<AdminLayout />}>
+            <Route path="/admin" element={<AdminRouteGuard><AdminLayout /></AdminRouteGuard>}>
               <Route index element={<AdminOverviewPage />} />
               <Route path="programs" element={<AdminProgramsPage />} />
               <Route path="programs/:programId" element={<AdminProgramDetailPage />} />

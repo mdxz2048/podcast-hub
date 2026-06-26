@@ -1,7 +1,6 @@
 import { KeyRound } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import type { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthProvider";
 import { Button } from "../components/Button";
@@ -39,13 +38,18 @@ export function LoginPage() {
     }
     setIsSubmitting(true);
     try {
-      await login({
+      const loggedInUser = await login({
         email,
         password,
         turnstile_token: turnstileToken || undefined
       });
-      setSuccess("登录成功，正在进入节目页。");
-      navigate("/programs");
+      if (loggedInUser.role === "admin") {
+        setSuccess("管理员登录成功，正在进入后台。");
+        navigate("/admin");
+      } else {
+        setSuccess("登录成功，正在进入节目页。");
+        navigate("/programs");
+      }
     } catch (e) {
       const apiError = e as ApiError;
       if (apiError.code === "invalid_credentials") {
