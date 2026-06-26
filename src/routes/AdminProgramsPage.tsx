@@ -1,4 +1,5 @@
 import { Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { SearchBar, Select } from "../components/Form";
@@ -38,13 +39,13 @@ export function AdminProgramsPage() {
         {programs.map((program) => (
           <article key={program.id} className="grid gap-3 border-b border-border px-4 py-4 last:border-b-0 lg:grid-cols-[1.4fr_140px_120px_120px_1fr] lg:items-center">
             <div className="min-w-0">
-              <h2 className="font-semibold leading-tight">{program.title}</h2>
+              <Link to={`/admin/programs/${program.id}`} className="font-semibold leading-tight hover:text-action">{program.title}</Link>
               <p className="mt-1 line-clamp-2 text-sm text-secondary">{program.description}</p>
             </div>
             <Badge tone={program.status === "rights_hold" ? "danger" : program.status === "draft" ? "warning" : "success"}>{programStatusLabel[program.status]}</Badge>
             <span className="text-sm text-secondary">{program.sourceCount} 个来源</span>
             <span className="text-sm text-secondary">{program.episodeCount} 个单集</span>
-            <span className="text-sm font-medium text-primary">{program.status === "rights_hold" ? "处理权利暂缓" : "检查发布状态"}</span>
+            <Link to={`/admin/programs/${program.id}`} className="text-sm font-medium text-primary hover:text-action">{program.status === "rights_hold" ? "处理权利暂缓" : "检查发布状态"}</Link>
           </article>
         ))}
       </div>

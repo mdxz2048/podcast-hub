@@ -75,6 +75,28 @@ Fields:
 - `usageCount`
 - `lastJobHealth`
 
+### 2.4.1 Connector
+
+Fields:
+
+- `id`
+- `name`
+- `kind`: `native_rss`, `python_connector`, or `manual_import`
+- `version`
+- `status`
+- `supportedIngestionTypes`
+- `supportedTriggerTypes`
+- `authModes`
+- `executionModes`
+- `entrypoint`
+- `dependencyLock`
+- `networkPolicy`
+- `resourceLimits`
+- `versionHistory`
+- `boundSourceIds`
+- `lastJobStatus`
+- `nextAction`
+
 ### 2.5 ImportJob
 
 Fields:
@@ -91,6 +113,12 @@ Fields:
 - `finishedAt`
 - `errorCategory`
 - `nextAction`
+- `connectorId`
+- `connectorVersion`
+- `progress`
+- `logEvents`
+- `timeline`
+- `outputEpisodeIds`
 
 ### 2.6 ReviewItem
 
@@ -137,6 +165,21 @@ Fields:
 - `perProgramLimit`
 - `totalLimit`
 
+### 2.10 AdminUser
+
+Fields:
+
+- `id`
+- `email`
+- `displayName`
+- `role`: `user` or `admin`
+- `status`: `pending_verification`, `active`, `suspended`, or `deleted`
+- `responsibilityLabels`: `system_owner`, `operator`, `reviewer`
+- `accessibleProgramCount`
+- `privateRssState`
+- `lastActivity`
+- `accessSummary`
+
 ## 3. Boundary Data
 
 Mock data must include:
@@ -155,6 +198,10 @@ Mock data must include:
 - Collection with no Programs.
 - Collection rule set that produces no RSS preview episodes.
 - Simulated RSS URL using `example.invalid`.
+- Native RSS Importer, Python Connector, and manual import workflow examples.
+- Job states for queued, running, waiting_auth, waiting_manual_upload, review_pending, completed, failed, and cancelled.
+- Review queue items with authorization hold and duplicate risk.
+- Admin and user accounts showing role versus responsibility labels.
 
 ## 4. Static State Sets
 

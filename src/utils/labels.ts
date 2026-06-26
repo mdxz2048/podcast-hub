@@ -1,4 +1,4 @@
-import type { AuthMode, ExecutionMode, ImportJob, Program, Source, SourceIngestionType, TriggerType } from "../types/domain";
+import type { AdminUser, AuthMode, Connector, ExecutionMode, ImportJob, Program, ReviewItem, Source, SourceIngestionType, TriggerType } from "../types/domain";
 
 export const programStatusLabel: Record<Program["status"], string> = {
   active: "已启用",
@@ -24,10 +24,14 @@ export const sourceStatusLabel: Record<Source["status"], string> = {
 export const jobStatusLabel: Record<ImportJob["status"], string> = {
   queued: "排队中",
   running: "运行中",
+  waiting_auth: "等待授权",
   waiting_for_auth: "等待授权",
+  waiting_manual_upload: "等待人工上传",
+  review_pending: "等待审核",
   completed: "已完成",
   completed_with_warnings: "完成但有警告",
   failed: "失败",
+  cancelled: "已取消",
   timed_out: "已超时"
 };
 
@@ -55,7 +59,8 @@ export const executionModeLabel: Record<ExecutionMode, string> = {
 
 export const errorCategoryLabel: Record<string, string> = {
   auth_required: "需要重新授权",
-  qr_expired: "二维码已过期"
+  qr_expired: "二维码已过期",
+  operator_cancelled: "操作员取消"
 };
 
 export const accessStateLabel: Record<Program["accessState"], string> = {
@@ -72,5 +77,48 @@ export const rightsStateLabel: Record<Program["rightsState"], string> = {
 
 export const rssTokenStateLabel = {
   active: "RSS 已启用",
-  revoked: "RSS 已撤销"
+  revoked: "RSS 已撤销",
+  paused: "RSS 已暂停"
+};
+
+export const connectorStatusLabel: Record<Connector["status"], string> = {
+  native_builtin: "平台内建",
+  approved: "已审核",
+  pending_review: "待审核",
+  validation_failed: "校验失败",
+  disabled: "已禁用",
+  revoked: "已撤销"
+};
+
+export const connectorKindLabel: Record<Connector["kind"], string> = {
+  native_rss: "平台内建 Native RSS Importer",
+  python_connector: "Python Connector",
+  manual_import: "人工导入工作流"
+};
+
+export const reviewStatusLabel: Record<ReviewItem["status"], string> = {
+  pending_review: "待审核",
+  approved: "已通过",
+  rejected: "已拒绝",
+  needs_revision: "退回补充",
+  duplicate_risk: "重复风险",
+  on_hold: "暂停发布"
+};
+
+export const userRoleLabel: Record<AdminUser["role"], string> = {
+  user: "普通用户",
+  admin: "管理员"
+};
+
+export const userStatusLabel: Record<AdminUser["status"], string> = {
+  pending_verification: "待邮箱验证",
+  active: "活跃",
+  suspended: "已暂停",
+  deleted: "已删除"
+};
+
+export const responsibilityLabel: Record<AdminUser["responsibilityLabels"][number], string> = {
+  system_owner: "System Owner",
+  operator: "Operator",
+  reviewer: "Reviewer"
 };

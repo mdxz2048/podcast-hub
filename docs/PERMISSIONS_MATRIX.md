@@ -53,6 +53,7 @@ A normal `user` account that can browse authorized Programs, manage personal col
 - Permission-denied UI must use the shared `PermissionDenied` pattern.
 - Admin responsibility labels can be represented in Mock data but must not be treated as account roles.
 - Invitations are not implemented in M0. If shown, they are future static placeholders only and do not introduce an Invitation API or User status.
+- M0.2B Users and Access page is a static governance prototype only. It may show suspend, restore, responsibility label, and RSS Token actions as Mock controls, but it must not introduce real user management APIs or treat responsibility labels as roles.
 
 ## 5. User Status Rules
 
@@ -64,4 +65,3 @@ Only these User statuses are valid:
 - `deleted`
 
 Do not use `Pending invite` or `Disabled User` as User statuses.
-

@@ -10,11 +10,19 @@ export type ExecutionMode = "unattended" | "interactive";
 export type JobStatus =
   | "queued"
   | "running"
+  | "waiting_auth"
   | "waiting_for_auth"
+  | "waiting_manual_upload"
+  | "review_pending"
   | "completed"
   | "completed_with_warnings"
   | "failed"
+  | "cancelled"
   | "timed_out";
+
+export type ConnectorStatus = "native_builtin" | "approved" | "pending_review" | "validation_failed" | "disabled" | "revoked";
+export type ReviewStatus = "pending_review" | "approved" | "rejected" | "needs_revision" | "duplicate_risk" | "on_hold";
+export type RssState = "active" | "revoked" | "paused";
 
 export interface User {
   id: string;
@@ -80,6 +88,8 @@ export interface Source {
   status: "ready" | "auth_required" | "schedule_paused" | "disabled";
   lastJobStatus: JobStatus;
   nextRunAt?: string;
+  connectorId?: string;
+  connectorVersion?: string;
 }
 
 export interface ImportJob {
@@ -95,4 +105,62 @@ export interface ImportJob {
   finishedAt?: string;
   errorCategory?: string;
   nextAction: string;
+  connectorId?: string;
+  connectorVersion?: string;
+  progress?: number;
+  logEvents?: string[];
+  timeline?: Array<{ label: string; at: string; tone: "success" | "warning" | "danger" | "info" | "neutral" }>;
+  outputEpisodeIds?: string[];
+}
+
+export interface Connector {
+  id: string;
+  name: string;
+  kind: "native_rss" | "python_connector" | "manual_import";
+  version: string;
+  status: ConnectorStatus;
+  supportedIngestionTypes: SourceIngestionType[];
+  supportedTriggerTypes: TriggerType[];
+  authModes: AuthMode[];
+  executionModes: ExecutionMode[];
+  entrypoint: string;
+  dependencyLock: string;
+  networkPolicy: string[];
+  resourceLimits: {
+    memoryMb: number;
+    timeoutSeconds: number;
+    maxDownloadMb: number;
+  };
+  versionHistory: Array<{ version: string; status: ConnectorStatus; date: string }>;
+  boundSourceIds: string[];
+  lastJobStatus: JobStatus;
+  nextAction: string;
+}
+
+export interface ReviewItem {
+  id: string;
+  programId: string;
+  sourceId: string;
+  jobId: string;
+  episodeId: string;
+  status: ReviewStatus;
+  metadataCompleteness: number;
+  rightsState: "clear" | "needs_confirmation" | "hold";
+  duplicateRisk: "none" | "possible" | "high";
+  fileState: "staged" | "missing" | "metadata_only";
+  publishDate: string;
+  suggestion: string;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  status: UserStatus;
+  responsibilityLabels: Array<"system_owner" | "operator" | "reviewer">;
+  accessibleProgramCount: number;
+  privateRssState: RssState;
+  lastActivity: string;
+  accessSummary: string;
 }

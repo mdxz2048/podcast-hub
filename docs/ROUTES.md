@@ -35,15 +35,16 @@ Routes are static and Mock-data driven until a later milestone. They do not impl
 | --- | --- | --- | --- |
 | `/admin` | Admin overview | M0.1 | Static operational overview. |
 | `/admin/programs` | Program list | M0.1 | Static Program management list. |
-| `/admin/programs/:programId` | Program detail | M0.2 | Static Program operation view. |
+| `/admin/programs/:programId` | Program detail | M0.2B | Static Program operation view with Sources, Episodes, publication, and activity sections. |
 | `/admin/sources` | Source list | M0.2 | Static source status list. |
-| `/admin/connectors` | Connector list | M0.2 | Static registry list. |
-| `/admin/connectors/:connectorId` | Connector detail | M0.2 | Static manifest/status view. |
-| `/admin/import-jobs` | Import job list | M0.2 | Static job status list. |
-| `/admin/import-jobs/:jobId` | Import job detail | M0.2 | Static sanitized log view. |
-| `/admin/review` | Review queue | M0.2 | Static review queue. |
+| `/admin/connectors` | Connector list | M0.2B | Static registry list. |
+| `/admin/connectors/new` | Connector registration wizard | M0.2B | Static Mock wizard; no real ZIP upload, parsing, validation, or execution. |
+| `/admin/connectors/:connectorId` | Connector detail | M0.2B | Static manifest/status view. |
+| `/admin/import-jobs` | Import job list | M0.2B | Static job status list. |
+| `/admin/import-jobs/:jobId` | Import job detail | M0.2B | Static sanitized log, timeline, QR placeholder, and output summary. |
+| `/admin/reviews` | Review queue | M0.2B | Static review queue with Drawer details and confirmation Dialogs. |
 | `/admin/publications` | Publications | M0.2 | Static RSS publication state. |
-| `/admin/users` | Users and access | M0.2 | Static user/access view; no invitations in M0. |
+| `/admin/users` | Users and access | M0.2B | Static user/access view; no invitations or real user management in M0. |
 | `/admin/audit` | Audit log | M0.2 | Static audit list. |
 | `/admin/settings` | Settings | M0.2 | Static settings view. |
 

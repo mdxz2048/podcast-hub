@@ -1,4 +1,4 @@
-import { Activity, ClipboardList, Library, RadioTower, Settings, ShieldCheck } from "lucide-react";
+import { Activity, ClipboardList, Library, RadioTower, Settings, ShieldCheck, UsersRound } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
 const nav = [
@@ -6,6 +6,8 @@ const nav = [
   { to: "/admin/programs", label: "节目", icon: Library },
   { to: "/admin/connectors", label: "连接器", icon: RadioTower },
   { to: "/admin/import-jobs", label: "导入任务", icon: ClipboardList },
+  { to: "/admin/reviews", label: "审核", icon: ShieldCheck },
+  { to: "/admin/users", label: "用户", icon: UsersRound },
   { to: "/admin/settings", label: "设置", icon: Settings }
 ];
 

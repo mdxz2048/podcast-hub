@@ -6,7 +6,15 @@ import { PublicLayout } from "./layouts/PublicLayout";
 import { UserLayout } from "./layouts/UserLayout";
 import { MockStateProvider } from "./mock/MockState";
 import { AdminOverviewPage } from "./routes/AdminOverviewPage";
+import { AdminConnectorDetailPage } from "./routes/AdminConnectorDetailPage";
+import { AdminConnectorNewPage } from "./routes/AdminConnectorNewPage";
+import { AdminConnectorsPage } from "./routes/AdminConnectorsPage";
+import { AdminImportJobDetailPage } from "./routes/AdminImportJobDetailPage";
+import { AdminImportJobsPage } from "./routes/AdminImportJobsPage";
+import { AdminProgramDetailPage } from "./routes/AdminProgramDetailPage";
 import { AdminProgramsPage } from "./routes/AdminProgramsPage";
+import { AdminReviewsPage } from "./routes/AdminReviewsPage";
+import { AdminUsersPage } from "./routes/AdminUsersPage";
 import { CollectionEditorPage } from "./routes/CollectionEditorPage";
 import { CollectionsPage } from "./routes/CollectionsPage";
 import { ComponentShowcasePage } from "./routes/ComponentShowcasePage";
@@ -44,6 +52,14 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminOverviewPage />} />
             <Route path="programs" element={<AdminProgramsPage />} />
+            <Route path="programs/:programId" element={<AdminProgramDetailPage />} />
+            <Route path="connectors" element={<AdminConnectorsPage />} />
+            <Route path="connectors/new" element={<AdminConnectorNewPage />} />
+            <Route path="connectors/:connectorId" element={<AdminConnectorDetailPage />} />
+            <Route path="import-jobs" element={<AdminImportJobsPage />} />
+            <Route path="import-jobs/:jobId" element={<AdminImportJobDetailPage />} />
+            <Route path="reviews" element={<AdminReviewsPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

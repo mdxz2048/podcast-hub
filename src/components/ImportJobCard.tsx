@@ -5,8 +5,8 @@ import { Badge } from "./Badge";
 
 function jobTone(status: ImportJob["status"]) {
   if (status === "completed") return "success" as const;
-  if (status === "failed" || status === "timed_out") return "danger" as const;
-  if (status === "waiting_for_auth" || status === "completed_with_warnings") return "warning" as const;
+  if (status === "failed" || status === "timed_out" || status === "cancelled") return "danger" as const;
+  if (status === "waiting_auth" || status === "waiting_for_auth" || status === "waiting_manual_upload" || status === "completed_with_warnings") return "warning" as const;
   return "info" as const;
 }
 

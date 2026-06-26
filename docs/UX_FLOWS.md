@@ -163,6 +163,12 @@ Exceptions:
 - Disabled Program should prevent scheduled jobs from starting.
 - Archived Program should be read-only except for audit and export.
 
+M0.2B static behavior:
+
+- Program detail summarizes Source count, latest Import Job state, pending Review count, publication state, and the next recommended action.
+- Tabs/sections cover Overview, Sources, Episodes, Access and Publication, and Activity.
+- Mock states cover normal, draft, authorization pending, paused, no permission, no Sources, no Episodes, long title, and long description.
+
 ### 3.4 Program Create and Edit
 
 Goal:
@@ -393,6 +399,12 @@ Exceptions:
 - Revocation requires confirmation and impact preview.
 - Approval requires passing validation and required documentation.
 
+M0.2B static behavior:
+
+- Connector list and detail distinguish platform Native RSS Importer, approved Python Connector, and manual import workflow.
+- Connector registration wizard is static only and must not read, upload, unzip, validate, or execute real ZIP files.
+- Manifest, network policy, resource limits, version history, bound Sources, and recent job result are shown from Mock data.
+
 ### 3.10 Import Jobs
 
 Goal:
@@ -474,6 +486,12 @@ Exceptions:
 - Logs must never display cookies, tokens, passwords, authorization headers, or QR session data.
 - If output files are malformed, show a validation error linked to the specific artifact.
 
+M0.2B static behavior:
+
+- Import job detail shows Program, Source, Connector version, trigger type, auth mode, status timeline, sanitized logs, progress, output summary, failure reason, and next action.
+- `waiting_auth` with `qr_each_run` displays a non-scannable QR placeholder and copy stating there is no real QR, Cookie, Token, or authentication data.
+- Retry and cancel are Mock actions only; cancel uses confirmation Dialog.
+
 ### 3.12 Authentication and Manual Todos
 
 Goal:
@@ -549,6 +567,12 @@ Exceptions:
 - Episodes from rights-hold Programs cannot be approved.
 - Missing required metadata blocks approval.
 - Duplicate conflict requires explicit reviewer decision.
+
+M0.2B static behavior:
+
+- Review queue uses Drawer details to avoid unnecessary page jumps.
+- Mock actions include approve, reject, request more information, mark duplicate, and pause publication.
+- Rejection uses confirmation Dialog; success uses Toast.
 
 ### 3.14 Episode Review Detail
 
@@ -662,6 +686,12 @@ Exceptions:
 - Revoking access must immediately affect personal RSS output.
 - Suspending a user revokes or suspends personal feed access by policy.
 - Invitations are not implemented in M0. If represented in static UI, they are future capability placeholders only and must not become User statuses.
+
+M0.2B static behavior:
+
+- Users page displays `user` and `admin` account roles separately from System Owner, Operator, and Reviewer responsibility labels.
+- Mock actions include suspend, restore, revoke RSS Token, inspect access, and view activity.
+- No real invitation, user management API, session control, or RSS revocation is implemented.
 
 ### 3.17 Audit Log
 

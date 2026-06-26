@@ -284,6 +284,16 @@ M0.2A user-side visual evidence must include:
 - Forgot password page.
 - Desktop and mobile screenshots for the core user path.
 
+M0.2B admin-side visual evidence must include:
+
+- Admin Program detail normal, draft, authorization-pending, paused, no-source, no-episode, long-text, and permission-denied states.
+- Connector list, detail, and static registration wizard.
+- Import job list and detail states for queued, running, waiting_auth, waiting_manual_upload, review_pending, completed, failed, and cancelled.
+- Non-scannable QR placeholder viewport screenshot for waiting_auth interactive jobs.
+- Review queue normal, empty, error-like risk, permission-denied, Drawer, rejection Dialog, and success Toast states.
+- Users and access page showing user/admin roles, user statuses, responsibility labels, RSS state, and permission summary.
+- Overlay states should include viewport screenshots with names that contain `viewport-overlay`.
+
 M0.3 must include:
 
 - Playwright desktop and mobile screenshots.
