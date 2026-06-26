@@ -119,3 +119,16 @@ Frontend:
 - No execution/run/download-media controls shown on connector management pages.
 
 This phase does not run screenshot workflows.
+
+## M1.1B test focus
+
+Backend:
+
+- Source and Secret service tests cover approved Connector requirements, Alpha mode rejection, encrypted Secret storage, required Secret binding, and revoked Secret blocking.
+- Production config fails closed without `SECRETS_MASTER_KEY`.
+
+Frontend:
+
+- Admin Playwright tests cover Source empty state, Source creation from approved version, Secret metadata display, and absence of runtime/download controls.
+
+This phase does not run screenshot workflows.

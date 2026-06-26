@@ -4,7 +4,7 @@
 
 The Job Protocol defines how the platform communicates with Connectors and how Connectors return events and outputs.
 
-Status in M1.1A: protocol definition only. Connector execution is not implemented in this phase.
+Status in M1.1B: protocol definition only. Source and Secret Reference data exist, but Connector execution and ImportJob creation are still not implemented.
 
 The protocol is intentionally file and stream based:
 
@@ -13,10 +13,10 @@ The protocol is intentionally file and stream based:
 - Connector writes standardized episode JSON files and allowed artifacts to its assigned output directory.
 - Connector exits after one import attempt.
 
-M1.1A non-goal reminder:
+M1.1B non-goal reminder:
 
 - Platform does not run connector code yet.
-- Platform does not create Source/ImportJob from uploaded package.
+- Platform does not create ImportJob from uploaded package or Source yet.
 
 ## 2. Protocol Guarantees
 

@@ -58,6 +58,14 @@ async function mockAuthApi(page: Page, initialUser: AuthUser | null = null) {
 async function mockConnectorAdminApi(page: Page) {
   const connectors = [{ id: "c1", slug: "example-connector", name: "Example Connector", description: "for test", status: "active", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" }];
   const versions = [{ id: "v1", connector_id: "c1", version: "1.0.0", review_status: "pending_review", runtime_profile: "python-basic", entrypoint: "src/connector.py", manifest: { id: "example-connector", version: "1.0.0" }, package_sha256: "abc", package_size_bytes: 100, validation_summary_json: "{\"is_valid\":true,\"issues\":[]}", created_at: "2026-01-01T00:00:00Z" }];
+  const approvedVersions = [{ ...versions[0], id: "v-approved", review_status: "approved", manifest: { id: "example-connector", version: "1.0.0", secrets: [{ name: "session_file" }] } }];
+  const sourceDetail = {
+    source: { id: "s1", connector_version_id: "v-approved", name: "Test Source", description: "source", status: "draft", trigger_type: "manual", auth_mode: "reusable_session", execution_mode: "unattended", config_json: "{}", network_mode: "trusted_admin", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" },
+    secret_bindings: [],
+    required_secrets: ["session_file"],
+    missing_secrets: ["session_file"]
+  };
+  const secrets = [{ id: "secret-1", name: "Session file", secret_type: "file", encryption_version: "aes-gcm-v1", created_at: "2026-01-01T00:00:00Z", binding_count: 0 }];
   await page.route("http://127.0.0.1:8080/admin/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -71,7 +79,7 @@ async function mockConnectorAdminApi(page: Page) {
       return;
     }
     if (request.method() === "GET" && url.pathname.endsWith("/admin/connectors/c1/versions")) {
-      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ versions }) });
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ versions: [...versions, ...approvedVersions] }) });
       return;
     }
     if (request.method() === "GET" && url.pathname.endsWith("/admin/connector-versions/v1")) {
@@ -109,6 +117,30 @@ async function mockConnectorAdminApi(page: Page) {
     }
     if (request.method() === "POST" && (url.pathname.endsWith("/admin/connectors/c1/enable") || url.pathname.endsWith("/admin/connectors/c1/disable"))) {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ connector: connectors[0] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/sources")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ sources: [] }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/sources")) {
+      await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(sourceDetail) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/sources/s1")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(sourceDetail) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/sources/s1/enable")) {
+      await route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: { code: "missing_required_secrets", message: "missing" } }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/secrets")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ secrets }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/secrets/text")) {
+      await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ secret: secrets[0] }) });
       return;
     }
     await route.fulfill({ status: 404, body: "not mocked" });
@@ -204,8 +236,34 @@ test("version actions are visible and runtime buttons are absent", async ({ page
   await mockAuthApi(page, buildUser("admin"));
   await mockConnectorAdminApi(page);
   await page.goto("/admin/connectors/c1");
-  await expect(page.getByRole("button", { name: "Approve" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Reject" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Reject", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "运行" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "下载媒体" })).toHaveCount(0);
+});
+
+test("admin source pages use real API empty and secret metadata states", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+  await page.goto("/admin/sources");
+  await expect(page.getByText("暂无 Source")).toBeVisible();
+  await page.goto("/admin/secrets");
+  await expect(page.getByText("Session file")).toBeVisible();
+  await expect(page.getByText("plain-secret-value")).toHaveCount(0);
+});
+
+test("admin can create source from approved connector version", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+  await page.goto("/admin/sources/new");
+  await page.getByLabel("Source 名称").fill("Test Source");
+  await page.getByLabel("描述").fill("source");
+  await page.getByLabel("Auth Mode").selectOption("reusable_session");
+  await page.getByLabel("Network Mode").selectOption("trusted_admin");
+  await page.getByRole("button", { name: "创建 Draft Source" }).click();
+  await expect(page).toHaveURL(/\/admin\/sources\/s1$/);
+  await expect(page.getByText("missing")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Enable Source" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "运行" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "下载媒体" })).toHaveCount(0);
 });

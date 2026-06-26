@@ -53,6 +53,18 @@ corepack pnpm dev
 - `POST /admin/connector-versions/{versionId}/disable` (admin only)
 - `POST /admin/connectors/{connectorId}/disable` (admin only)
 - `POST /admin/connectors/{connectorId}/enable` (admin only)
+- `GET /admin/sources` (admin only)
+- `POST /admin/sources` (admin only)
+- `GET /admin/sources/{sourceId}` (admin only)
+- `PATCH /admin/sources/{sourceId}` (admin only)
+- `POST /admin/sources/{sourceId}/enable` (admin only)
+- `POST /admin/sources/{sourceId}/disable` (admin only)
+- `GET /admin/secrets` (admin only)
+- `POST /admin/secrets/text` (admin only)
+- `POST /admin/secrets/file` (admin only)
+- `POST /admin/secrets/{secretId}/revoke` (admin only)
+- `POST /admin/sources/{sourceId}/secret-bindings` (admin only)
+- `DELETE /admin/sources/{sourceId}/secret-bindings/{bindingId}` (admin only)
 
 ## M1.1A scope note
 
@@ -61,6 +73,13 @@ corepack pnpm dev
 - This phase does **not** execute connector code, does not create Source/ImportJob, and does not download media.
 - Do not upload secrets/cookies/session files/media; manifest secrets are declaration-only.
 - Duoting remains an external future package upload target, not repository-internal platform source code.
+
+## M1.1B scope note
+
+- Source is a Connector configuration instance, not a Program.
+- Secrets are stored as encrypted records and bound by reference; APIs never return values.
+- Alpha Source creation supports only manual + none/reusable_session + unattended.
+- This phase still does **not** execute Connector code and does not create Program, Episode, RSS, or ImportJob data.
 
 ## Admin bootstrap (local only)
 

@@ -37,6 +37,7 @@ type Config struct {
 	CSRFHeaderName string
 
 	ConnectorPackageLocalDir string
+	SecretsMasterKey         string
 }
 
 func Load() (Config, error) {
@@ -62,6 +63,7 @@ func Load() (Config, error) {
 		SMTPFrom:                 getEnv("SMTP_FROM", "no-reply@example.invalid"),
 		CSRFHeaderName:           getEnv("CSRF_HEADER_NAME", "X-CSRF-Token"),
 		ConnectorPackageLocalDir: getEnv("CONNECTOR_PACKAGE_LOCAL_DIR", ".local/connector-packages"),
+		SecretsMasterKey:         os.Getenv("SECRETS_MASTER_KEY"),
 	}
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err
@@ -107,6 +109,9 @@ func (c Config) Validate() error {
 		}
 		if !c.SessionCookieSecure {
 			return errors.New("SESSION_COOKIE_SECURE must be true in production")
+		}
+		if strings.TrimSpace(c.SecretsMasterKey) == "" {
+			return errors.New("SECRETS_MASTER_KEY is required in production")
 		}
 	}
 	if c.TurnstileMode == "cloudflare" && strings.TrimSpace(c.TurnstileSecretKey) == "" {

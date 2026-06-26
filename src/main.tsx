@@ -16,6 +16,10 @@ import { AdminImportJobsPage } from "./routes/AdminImportJobsPage";
 import { AdminProgramDetailPage } from "./routes/AdminProgramDetailPage";
 import { AdminProgramsPage } from "./routes/AdminProgramsPage";
 import { AdminReviewsPage } from "./routes/AdminReviewsPage";
+import { AdminSecretsPage } from "./routes/AdminSecretsPage";
+import { AdminSourceDetailPage } from "./routes/AdminSourceDetailPage";
+import { AdminSourceNewPage } from "./routes/AdminSourceNewPage";
+import { AdminSourcesPage } from "./routes/AdminSourcesPage";
 import { AdminUsersPage } from "./routes/AdminUsersPage";
 import { CollectionEditorPage } from "./routes/CollectionEditorPage";
 import { CollectionsPage } from "./routes/CollectionsPage";
@@ -61,6 +65,10 @@ createRoot(document.getElementById("root")!).render(
               <Route path="connectors" element={<AdminConnectorsPage />} />
               <Route path="connectors/new" element={<AdminConnectorNewPage />} />
               <Route path="connectors/:connectorId" element={<AdminConnectorDetailPage />} />
+              <Route path="sources" element={<AdminSourcesPage />} />
+              <Route path="sources/new" element={<AdminSourceNewPage />} />
+              <Route path="sources/:sourceId" element={<AdminSourceDetailPage />} />
+              <Route path="secrets" element={<AdminSecretsPage />} />
               <Route path="import-jobs" element={<AdminImportJobsPage />} />
               <Route path="import-jobs/:jobId" element={<AdminImportJobDetailPage />} />
               <Route path="reviews" element={<AdminReviewsPage />} />

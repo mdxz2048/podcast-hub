@@ -19,7 +19,7 @@ func testServer(t *testing.T) *Server {
 		SessionCookieName: "podcast_hub_session",
 		CSRFHeaderName:    "X-CSRF-Token",
 	}
-	s := NewServer(cfg, nil, nil, HealthDependencies{}, nil)
+	s := NewServer(cfg, nil, nil, HealthDependencies{}, nil, nil)
 	return s
 }
 

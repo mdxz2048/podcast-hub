@@ -19,6 +19,7 @@ import (
 	"github.com/mdxz2048/podcast-hub/internal/mail"
 	"github.com/mdxz2048/podcast-hub/internal/ratelimit"
 	"github.com/mdxz2048/podcast-hub/internal/security"
+	"github.com/mdxz2048/podcast-hub/internal/sources"
 	"github.com/mdxz2048/podcast-hub/internal/store/postgres"
 )
 
@@ -58,6 +59,12 @@ func main() {
 	connectorStore := postgres.NewConnectorStore(dbPool)
 	connectorPackageStore := connectors.NewLocalPackageStore(cfg.ConnectorPackageLocalDir)
 	connectorService := connectors.NewService(connectorStore, connectorPackageStore)
+	secretCipher, err := sources.NewSecretCipher(cfg.SecretsMasterKey)
+	if err != nil {
+		logger.Error("failed to configure secret encryption", "error", err.Error())
+		os.Exit(1)
+	}
+	sourceService := sources.NewService(postgres.NewSourceStore(dbPool), connectorStore, secretCipher)
 	authService := auth.NewService(store, mailerImpl, turnstileVerifier, limiter, auth.Options{
 		SessionPepper:    cfg.SessionPepper,
 		AuthCodePepper:   cfg.AuthCodePepper,
@@ -72,7 +79,7 @@ func main() {
 		Redis:    redisClient,
 		SMTPHost: cfg.SMTPHost,
 		SMTPPort: cfg.SMTPPort,
-	}, connectorService)
+	}, connectorService, sourceService)
 	httpSrv := &stdhttp.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           server.Router(),

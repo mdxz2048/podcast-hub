@@ -102,6 +102,13 @@ go run ./cmd/admin seed --email user@example.invalid --promote
   - Local development package store root for Connector ZIP quarantine/approved files.
   - Must remain git-ignored.
 
+## M1.1B environment additions
+
+- `SECRETS_MASTER_KEY`
+  - Required in production.
+  - Must be 32 raw bytes or base64-encoded 32 bytes.
+  - Used for Secret Reference encryption; never commit a real value.
+
 Security reminder:
 
 - Never place secrets, session dumps, cookies, tokens, or real media into connector package directories.

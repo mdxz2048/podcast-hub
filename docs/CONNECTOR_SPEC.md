@@ -5,7 +5,8 @@
 Phase 1 supports Python Connectors only.
 
 M1.1A implements only package upload, static validation, version registration, review, and enable/disable control.
-M1.1A does not execute connector packages and does not create Program/Source/ImportJob data.
+M1.1B adds Connector Source instances and encrypted Secret Reference bindings.
+Neither M1.1A nor M1.1B executes connector packages or creates Program/ImportJob/Episode data.
 
 A Connector is a versioned ZIP package that performs one authorized import task for one Source and exits. It is not a daemon, scheduler, crawler marketplace, RSS generator, database writer, or secret manager.
 
@@ -411,3 +412,12 @@ A Connector ZIP can be approved only if:
 - Required inputs are declared.
 - No obvious secrets are embedded in the package.
 - Package state is approved by an authorized administrator.
+
+## 15. M1.1B Source and Secret Reference
+
+- Source binds one approved ConnectorVersion to one admin-managed configuration instance.
+- Source is not a Program.
+- Source stores Secret references only.
+- Secret values must not be placed in ZIP packages, manifest files, logs, or API responses.
+- Alpha Source creation accepts only `trigger_type=manual`, `auth_mode=none|reusable_session`, and `execution_mode=unattended`.
+- `scheduled`, `qr_each_run`, and `interactive` Source execution are deferred.

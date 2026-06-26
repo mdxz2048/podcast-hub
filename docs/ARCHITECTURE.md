@@ -503,3 +503,11 @@ Logs must be structured and redacted.
 - Added development filesystem package store under `.local/connector-packages/` for quarantine and approved artifacts.
 - Upload pipeline is static and safety-first: no Python execution, no shell execution, no Docker, no media ingestion.
 - Program/Source/ImportJob pipelines remain outside M1.1A implementation scope.
+
+## M1.1B Source And Secret Reference Increment
+
+- Added `connector_sources`, `secret_records`, `source_secret_bindings`, and `source_events`.
+- Source is a Connector configuration instance and does not create Program or Episode records.
+- Secret values are encrypted with AES-GCM and exposed only as metadata plus binding state.
+- Alpha supports only manual + none/reusable_session + unattended Source creation.
+- Connector execution, ImportJob creation, staging review, RSS, scheduled jobs, interactive/QR jobs, real duoting, untrusted Connector isolation, and production deployment remain outside this phase.

@@ -17,6 +17,7 @@ import (
 	"github.com/mdxz2048/podcast-hub/internal/auth"
 	"github.com/mdxz2048/podcast-hub/internal/connectors"
 	"github.com/mdxz2048/podcast-hub/internal/security"
+	"github.com/mdxz2048/podcast-hub/internal/sources"
 )
 
 type Server struct {
@@ -25,6 +26,7 @@ type Server struct {
 	turnstile        security.TurnstileVerifier
 	health           HealthDependencies
 	connectors       *connectors.Service
+	sources          *sources.Service
 	resolveSessionFn func(ctx context.Context, token string) (auth.Session, auth.User, error)
 }
 
@@ -43,13 +45,14 @@ type HealthDependencies struct {
 	SMTPPort int
 }
 
-func NewServer(cfg config.Config, authService *auth.Service, turnstile security.TurnstileVerifier, health HealthDependencies, connectorService *connectors.Service) *Server {
+func NewServer(cfg config.Config, authService *auth.Service, turnstile security.TurnstileVerifier, health HealthDependencies, connectorService *connectors.Service, sourceService *sources.Service) *Server {
 	return &Server{
 		cfg:        cfg,
 		auth:       authService,
 		turnstile:  turnstile,
 		health:     health,
 		connectors: connectorService,
+		sources:    sourceService,
 	}
 }
 
@@ -90,6 +93,18 @@ func (s *Server) Router() stdhttp.Handler {
 		r.Post("/connector-versions/{versionId}/approve", s.handleAdminConnectorVersionApprove)
 		r.Post("/connector-versions/{versionId}/reject", s.handleAdminConnectorVersionReject)
 		r.Post("/connector-versions/{versionId}/disable", s.handleAdminConnectorVersionDisable)
+		r.Get("/sources", s.handleAdminSources)
+		r.Post("/sources", s.handleAdminSourceCreate)
+		r.Get("/sources/{sourceId}", s.handleAdminSource)
+		r.Patch("/sources/{sourceId}", s.handleAdminSourceUpdate)
+		r.Post("/sources/{sourceId}/enable", s.handleAdminSourceEnable)
+		r.Post("/sources/{sourceId}/disable", s.handleAdminSourceDisable)
+		r.Get("/secrets", s.handleAdminSecrets)
+		r.Post("/secrets/text", s.handleAdminSecretTextCreate)
+		r.Post("/secrets/file", s.handleAdminSecretFileCreate)
+		r.Post("/secrets/{secretId}/revoke", s.handleAdminSecretRevoke)
+		r.Post("/sources/{sourceId}/secret-bindings", s.handleAdminSourceSecretBind)
+		r.Delete("/sources/{sourceId}/secret-bindings/{bindingId}", s.handleAdminSourceSecretUnbind)
 	})
 	return router
 }
