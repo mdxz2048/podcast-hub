@@ -2,11 +2,9 @@
 
 ## 1. Scope
 
-This document defines environment and local configuration policy.
+This document defines M1.0 local environment and security configuration for the real account flow.
 
-M0.0 and M0.1 do not create real services, Docker, databases, API servers, authentication, email, Turnstile, RSS, upload, or Connector execution environments.
-
-## 2. Environment Files
+## 2. Git policy
 
 Allowed in Git:
 
@@ -14,56 +12,71 @@ Allowed in Git:
 
 Forbidden in Git:
 
-- `.env`
-- `.env.*` except `.env.example`
-- real passwords
-- real cookies
-- real tokens
-- SSH private keys
-- server credentials
-- database credentials
-- object storage root keys
+- `.env` and other real env files
+- real passwords, tokens, cookies, keys
+- private account data and media
 
-## 3. Placeholder Policy
+## 3. Required variables
 
-`.env.example` may contain placeholders only.
+### Frontend
 
-Examples:
+- `VITE_API_BASE_URL`
+- `VITE_TURNSTILE_MODE` (`mock` or `cloudflare`, optional `off` for local debug)
+- `VITE_TURNSTILE_SITE_KEY`
 
-- `change_me`
-- `example.invalid`
-- local development URLs
+### Backend
 
-It must not contain:
+- `APP_ENV`
+- `HTTP_ADDR`
+- `FRONTEND_ORIGIN`
+- `DATABASE_URL`
+- `REDIS_URL`
+- `SESSION_PEPPER`
+- `AUTH_CODE_PEPPER`
+- `TURNSTILE_MODE`
+- `TURNSTILE_SECRET_KEY` (required in `cloudflare` mode and production)
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USERNAME`
+- `SMTP_PASSWORD`
+- `SMTP_FROM`
 
-- real secrets
-- real production hostnames with credentials
-- real access keys
-- real session keys
+## 4. Production fail-closed rules
 
-## 4. M0.1 Local Environment
+Production startup must fail when:
 
-M0.1 may require only frontend local development configuration once implementation begins.
+- `TURNSTILE_MODE != cloudflare`
+- `TURNSTILE_SECRET_KEY` missing
+- `REDIS_URL` missing
+- `SESSION_COOKIE_SECURE != true`
+- any required security pepper missing
 
-It must not require:
+## 5. Local development stack
 
-- PostgreSQL.
-- Redis.
-- S3-compatible object storage.
-- Cloudflare Turnstile.
-- Email provider.
-- Docker.
-- Connector runner.
+M1.0 local dependencies:
 
-## 5. Long-Term Backend Environment
+- PostgreSQL
+- Redis
+- Mailpit
 
-Frozen long-term backend architecture:
+Start dependencies:
 
-- Go platform backend.
-- PostgreSQL main database.
-- Redis for cache, rate limiting, and task queue.
-- S3-compatible object storage for authorized media and task artifacts.
-- Python only for Connector SDK and Connector execution environment.
+```bash
+docker compose up -d postgres redis mailpit
+```
 
-Python FastAPI is not used as the platform main API.
+Mailpit UI:
 
+- http://127.0.0.1:8025
+
+## 6. Run commands
+
+```bash
+set -a && source .env && set +a
+go run ./cmd/api
+```
+
+```bash
+corepack pnpm install
+corepack pnpm dev
+```

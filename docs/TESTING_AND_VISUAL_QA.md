@@ -2,9 +2,9 @@
 
 ## 1. Scope
 
-This document defines M0 testing and visual QA policy.
+This document defines M0+M1 testing and visual QA policy.
 
-M0.1 uses Playwright for screenshot foundations and static route checks. It does not test real APIs, authentication, databases, upload, RSS generation, Connector execution, or Docker services.
+M1.0 keeps Playwright screenshot acceptance and adds Go unit tests for authentication/security logic. Only account flows are real in M1.0.
 
 ## 2. Frozen Tooling
 
@@ -89,3 +89,18 @@ Do not add in M0.1:
 - RSS XML tests.
 - Docker smoke tests.
 
+## 8. M1.0 Authentication baseline
+
+Backend:
+
+- `go test ./...` for auth service, security helpers, turnstile verifier, and production config fail-closed checks.
+
+Frontend:
+
+- Keep screenshot coverage for auth key states:
+  - register turnstile mock
+  - verification code error
+  - verification code expired
+  - login error
+  - forgot-password generic success hint
+  - mobile register verify page

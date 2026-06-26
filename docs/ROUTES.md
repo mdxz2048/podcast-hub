@@ -2,19 +2,20 @@
 
 ## 1. Scope
 
-This document defines proposed frontend routes for M0.1 and M0.2 static experiences.
+This document defines frontend routes after M1.0 authentication integration.
 
-Routes are static and Mock-data driven until a later milestone. They do not imply real APIs, authentication, RSS generation, upload, Connector execution, or backend services.
+Only account-related routes are connected to real backend APIs in M1.0. Program, collection, admin workflow, RSS, and Connector pages remain Mock-data driven.
 
 ## 2. Public Routes
 
 | Route | Page | M0 Phase | Notes |
 | --- | --- | --- | --- |
 | `/` | Home | M0.1 | Static product home with content-led visual direction. |
-| `/register` | Register | M0.1 | Static registration UI; no real Turnstile or email. |
-| `/register/verify` | Email verification | M0.2A | Static six-digit code UI; no real verification service. |
-| `/login` | Login | M0.1 | Static login UI; no real authentication. |
-| `/forgot-password` | Password reset request | M0.2A | Static request flow with non-enumerating copy; no email service. |
+| `/register` | Register | M1.0 | Real `POST /auth/register/request-code` + Turnstile token submit. |
+| `/register/verify` | Email verification | M1.0 | Real `POST /auth/register/verify-code`, success creates cookie session. |
+| `/login` | Login | M1.0 | Real `POST /auth/login`; generic failure copy to avoid enumeration. |
+| `/forgot-password` | Password reset | M1.0 | Real `POST /auth/password-reset/request` and `POST /auth/password-reset/verify`. |
+| `/reset-password` | Password reset verify | M1.0 | Real reset verification form (`code + new password`) calling `POST /auth/password-reset/verify`. |
 
 ## 3. User App Routes
 

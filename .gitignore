@@ -109,6 +109,7 @@ desktop.ini
 *.db
 *.dump
 *.sql
+!migrations/*.sql
 
 # Package manager local files
 .pnp.*

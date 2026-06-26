@@ -4,7 +4,11 @@ import { Button } from "../components/Button";
 
 export function PublicLayout() {
   const location = useLocation();
-  const isAuth = location.pathname === "/login" || location.pathname === "/register" || location.pathname === "/register/verify" || location.pathname === "/forgot-password";
+  const isAuth = location.pathname === "/login"
+    || location.pathname === "/register"
+    || location.pathname === "/register/verify"
+    || location.pathname === "/forgot-password"
+    || location.pathname === "/reset-password";
 
   return (
     <div className="min-h-screen">

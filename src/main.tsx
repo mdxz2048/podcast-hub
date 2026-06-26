@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { AuthProvider } from "./auth/AuthProvider";
 import { AdminLayout } from "./layouts/AdminLayout";
 import { PublicLayout } from "./layouts/PublicLayout";
 import { UserLayout } from "./layouts/UserLayout";
@@ -25,6 +26,7 @@ import { ProgramDetailPage } from "./routes/ProgramDetailPage";
 import { ProgramsPage } from "./routes/ProgramsPage";
 import { RegisterPage } from "./routes/RegisterPage";
 import { RegisterVerifyPage } from "./routes/RegisterVerifyPage";
+import { ResetPasswordPage } from "./routes/ResetPasswordPage";
 import { SubscribePage } from "./routes/SubscribePage";
 import "./styles/tokens.css";
 import "./styles/global.css";
@@ -32,37 +34,40 @@ import "./styles/global.css";
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <MockStateProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<PublicLayout />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/register/verify" element={<RegisterVerifyPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/components" element={<ComponentShowcasePage />} />
-          </Route>
-          <Route element={<UserLayout />}>
-            <Route path="/programs" element={<ProgramsPage />} />
-            <Route path="/programs/:programId" element={<ProgramDetailPage />} />
-            <Route path="/collections" element={<CollectionsPage />} />
-            <Route path="/collections/:collectionId" element={<CollectionEditorPage />} />
-            <Route path="/collections/:collectionId/subscribe" element={<SubscribePage />} />
-          </Route>
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminOverviewPage />} />
-            <Route path="programs" element={<AdminProgramsPage />} />
-            <Route path="programs/:programId" element={<AdminProgramDetailPage />} />
-            <Route path="connectors" element={<AdminConnectorsPage />} />
-            <Route path="connectors/new" element={<AdminConnectorNewPage />} />
-            <Route path="connectors/:connectorId" element={<AdminConnectorDetailPage />} />
-            <Route path="import-jobs" element={<AdminImportJobsPage />} />
-            <Route path="import-jobs/:jobId" element={<AdminImportJobDetailPage />} />
-            <Route path="reviews" element={<AdminReviewsPage />} />
-            <Route path="users" element={<AdminUsersPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<PublicLayout />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/register/verify" element={<RegisterVerifyPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/components" element={<ComponentShowcasePage />} />
+            </Route>
+            <Route element={<UserLayout />}>
+              <Route path="/programs" element={<ProgramsPage />} />
+              <Route path="/programs/:programId" element={<ProgramDetailPage />} />
+              <Route path="/collections" element={<CollectionsPage />} />
+              <Route path="/collections/:collectionId" element={<CollectionEditorPage />} />
+              <Route path="/collections/:collectionId/subscribe" element={<SubscribePage />} />
+            </Route>
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminOverviewPage />} />
+              <Route path="programs" element={<AdminProgramsPage />} />
+              <Route path="programs/:programId" element={<AdminProgramDetailPage />} />
+              <Route path="connectors" element={<AdminConnectorsPage />} />
+              <Route path="connectors/new" element={<AdminConnectorNewPage />} />
+              <Route path="connectors/:connectorId" element={<AdminConnectorDetailPage />} />
+              <Route path="import-jobs" element={<AdminImportJobsPage />} />
+              <Route path="import-jobs/:jobId" element={<AdminImportJobDetailPage />} />
+              <Route path="reviews" element={<AdminReviewsPage />} />
+              <Route path="users" element={<AdminUsersPage />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </MockStateProvider>
   </StrictMode>
 );

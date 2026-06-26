@@ -4,8 +4,12 @@ import { mkdirSync } from "node:fs";
 const pages = [
   { name: "home-normal", path: "/" },
   { name: "register-normal", path: "/register" },
+  { name: "register-turnstile-mock", path: "/register" },
   { name: "register-success-feedback", path: "/register?state=success" },
   { name: "register-verify-normal", path: "/register/verify" },
+  { name: "register-verify-code-error", path: "/register/verify?state=error" },
+  { name: "register-verify-code-expired", path: "/register/verify?state=expired" },
+  { name: "register-verify-mobile-reference", path: "/register/verify?email=user%40example.invalid" },
   { name: "register-verify-success-feedback", path: "/register/verify?state=success" },
   { name: "login-error", path: "/login?state=error" },
   { name: "login-focus-visible", path: "/login?state=focus" },

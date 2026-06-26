@@ -1,12 +1,58 @@
 import { ArrowLeft, Mail } from "lucide-react";
-import { Link } from "react-router-dom";
+import { FormEvent, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { requestPasswordReset } from "../api/auth";
+import type { ApiError } from "../api/client";
 import { Button } from "../components/Button";
 import { Input } from "../components/Form";
+import { TurnstileField } from "../components/TurnstileField";
 import { ErrorState, LoadingState, SuccessFeedback } from "../components/StateBlocks";
 import { useViewState } from "./state";
 
 export function ForgotPasswordPage() {
+  const navigate = useNavigate();
   const state = useViewState();
+  const [email, setEmail] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [requesting, setRequesting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const mockedMessage = useMemo(() => {
+    if (state === "loading") return "正在准备重置说明";
+    if (state === "success") return "如果该邮箱可用，你将收到后续重置说明。";
+    if (state === "error") return "暂时无法发送重置说明";
+    if (state === "denied") return "请求过于频繁，请稍后重试";
+    return null;
+  }, [state]);
+
+  async function handleRequest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
+    if (!email) {
+      setError("请输入邮箱。");
+      return;
+    }
+    if (!turnstileToken) {
+      setError("请先完成人机验证。");
+      return;
+    }
+    setRequesting(true);
+    try {
+      await requestPasswordReset({ email, turnstile_token: turnstileToken });
+      setSuccess("如果该邮箱可用，你将收到后续重置说明。");
+    } catch (e) {
+      const apiError = e as ApiError;
+      if (apiError.code === "rate_limited") {
+        setError("请求过于频繁，请稍后重试。");
+      } else {
+        setError(apiError.message || "暂时无法发送重置说明。");
+      }
+    } finally {
+      setRequesting(false);
+    }
+  }
 
   return (
     <section className="mx-auto grid max-w-5xl gap-8 px-5 py-10 md:grid-cols-[0.9fr_1.1fr] md:py-14">
@@ -20,20 +66,27 @@ export function ForgotPasswordPage() {
           <ArrowLeft className="h-4 w-4" /> 返回登录
         </Link>
       </div>
-      <form className="grid gap-5 rounded-lg border border-border bg-surface p-6 shadow-subtle">
-        {state === "loading" ? <LoadingState title="正在准备重置说明" /> : null}
-        {state === "success" ? <SuccessFeedback message="如果该邮箱可用，你将收到后续重置说明。这是模拟反馈。" /> : null}
-        {state === "error" ? <ErrorState title="暂时无法发送重置说明" /> : null}
-        {state === "denied" ? <ErrorState title="请求过于频繁，请稍后重试" /> : null}
-        <Input label="邮箱" placeholder="name@example.invalid" type="email" />
+      <div className="grid gap-5 rounded-lg border border-border bg-surface p-6 shadow-subtle">
+        {state === "loading" || requesting ? <LoadingState title="正在准备重置说明" /> : null}
+        {state === "success" ? <SuccessFeedback message={mockedMessage ?? "如果该邮箱可用，你将收到后续重置说明。"} /> : null}
+        {state === "error" || state === "denied" ? <ErrorState title={mockedMessage ?? "请求失败"} /> : null}
+        {success ? <SuccessFeedback message={success} /> : null}
+        {error ? <ErrorState title={error} /> : null}
+        <form className="grid gap-4" onSubmit={handleRequest}>
+          <Input label="邮箱" placeholder="name@example.com" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+          <TurnstileField value={turnstileToken} onChange={setTurnstileToken} error={null} />
+          <Button type="submit" disabled={requesting}>发送重置说明</Button>
+        </form>
+        <Button type="button" variant="secondary" onClick={() => navigate(`/reset-password?email=${encodeURIComponent(email)}`)} disabled={!email}>
+          我已收到邮件，去重置密码
+        </Button>
         <div className="rounded-md border border-border bg-subtle p-4 text-sm text-secondary">
           <div className="flex items-center gap-2 font-medium text-primary">
             <Mail className="h-4 w-4" /> 安全提示
           </div>
-          <p className="mt-2">真实版本会让旧会话失效，并发送安全通知邮件。M0.2A 不发送邮件。</p>
+          <p className="mt-2">重置成功后，系统会撤销该账号旧会话并发送安全通知邮件。</p>
         </div>
-        <Button type="button">发送重置说明</Button>
-      </form>
+      </div>
     </section>
   );
 }
