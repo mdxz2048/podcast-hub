@@ -4,18 +4,16 @@
 
 Phase 1 supports Python Connectors only.
 
+M1.1A implements only package upload, static validation, version registration, review, and enable/disable control.
+M1.1A does not execute connector packages and does not create Program/Source/ImportJob data.
+
 A Connector is a versioned ZIP package that performs one authorized import task for one Source and exits. It is not a daemon, scheduler, crawler marketplace, RSS generator, database writer, or secret manager.
 
 The platform controls:
 
 - Connector package upload and validation.
 - Connector version approval and revocation.
-- Job creation and scheduling.
-- Authentication state.
-- Manual todos.
-- Execution isolation.
-- Output validation.
-- Episode review and RSS publication.
+- Connector registry metadata and audit events.
 
 The Connector controls only:
 
@@ -31,11 +29,14 @@ Every Connector must be uploaded as a ZIP file.
 Required files:
 
 - `manifest.yaml`
-- Entrypoint source file, for example `connector.py`
+- Entrypoint source file (for example `src/connector.py`)
 - Dependency lock file, for example `requirements.lock`
 - `README.md`
-- Tests, for example files under `tests/`
-- Sample output fixture, for example files under `samples/`
+
+Optional in M1.1A:
+
+- `tests/`
+- `fixtures/`
 
 Recommended package layout:
 
@@ -261,22 +262,19 @@ Rules:
 - Administrator uploads media and episode metadata through a human import workflow.
 - Output enters review before publication.
 
-## 8. Connector Package Lifecycle
+## 8. Connector Package Lifecycle (M1.1A)
 
 ```mermaid
 stateDiagram-v2
     [*] --> Uploaded
     Uploaded --> Validating
     Validating --> ValidationFailed
-    Validating --> PendingApproval
+    Validating --> PendingReview
     ValidationFailed --> Uploaded: new ZIP uploaded
-    PendingApproval --> Approved
-    PendingApproval --> Rejected
-    Approved --> Deprecated
-    Approved --> Revoked
-    Deprecated --> Revoked
-    Deprecated --> Approved: restore by policy
-    Revoked --> [*]
+    PendingReview --> Approved
+    PendingReview --> Rejected
+    Approved --> Disabled
+    Disabled --> [*]
     Rejected --> [*]
 ```
 
@@ -285,10 +283,19 @@ State meanings:
 - `Uploaded`: ZIP artifact received, not trusted.
 - `Validating`: platform checks structure, manifest, sample output, and policy.
 - `ValidationFailed`: package cannot be approved without changes.
-- `PendingApproval`: validation passed, awaiting authorized human approval.
-- `Approved`: package can be bound to Sources.
-- `Deprecated`: package should not be used for new Sources, but existing Sources may continue if policy allows.
-- `Revoked`: package cannot start new jobs and should be removed from active Sources.
+- `PendingReview`: validation passed, awaiting authorized human approval.
+- `Approved`: package becomes selectable for future Source binding phases.
+- `Disabled`: approved package is no longer available for future Source binding.
+
+## 15. M1.1A explicit non-goals
+
+- No Python execution.
+- No Docker build/run.
+- No Program creation.
+- No Source creation/binding.
+- No ImportJob execution.
+- No episode staging/review/RSS publishing.
+- No secret upload/storage in connector package or manifest values.
 
 ## 9. Connector Configuration Lifecycle
 

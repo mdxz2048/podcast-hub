@@ -35,30 +35,33 @@ type Config struct {
 	SMTPFrom     string
 
 	CSRFHeaderName string
+
+	ConnectorPackageLocalDir string
 }
 
 func Load() (Config, error) {
 	cfg := Config{
-		AppEnv:              getEnv("APP_ENV", "development"),
-		HTTPAddr:            getEnv("HTTP_ADDR", ":8080"),
-		FrontendOrigin:      getEnv("FRONTEND_ORIGIN", "http://127.0.0.1:5173"),
-		DatabaseURL:         os.Getenv("DATABASE_URL"),
-		RedisURL:            os.Getenv("REDIS_URL"),
-		SessionCookieName:   getEnv("SESSION_COOKIE_NAME", "podcast_hub_session"),
-		SessionTTL:          durationFromSeconds("SESSION_TTL_SECONDS", 60*60*24*14),
-		SessionCookieSecure: parseBool(getEnv("SESSION_COOKIE_SECURE", "false")),
-		SessionCookieDomain: os.Getenv("SESSION_COOKIE_DOMAIN"),
-		SessionPepper:       os.Getenv("SESSION_PEPPER"),
-		AuthCodePepper:      os.Getenv("AUTH_CODE_PEPPER"),
-		TurnstileMode:       getEnv("TURNSTILE_MODE", "mock"),
-		TurnstileSiteKey:    os.Getenv("VITE_TURNSTILE_SITE_KEY"),
-		TurnstileSecretKey:  os.Getenv("TURNSTILE_SECRET_KEY"),
-		SMTPHost:            getEnv("SMTP_HOST", "127.0.0.1"),
-		SMTPPort:            parseInt(getEnv("SMTP_PORT", "1025"), 1025),
-		SMTPUsername:        os.Getenv("SMTP_USERNAME"),
-		SMTPPassword:        os.Getenv("SMTP_PASSWORD"),
-		SMTPFrom:            getEnv("SMTP_FROM", "no-reply@example.invalid"),
-		CSRFHeaderName:      getEnv("CSRF_HEADER_NAME", "X-CSRF-Token"),
+		AppEnv:                   getEnv("APP_ENV", "development"),
+		HTTPAddr:                 getEnv("HTTP_ADDR", ":8080"),
+		FrontendOrigin:           getEnv("FRONTEND_ORIGIN", "http://127.0.0.1:5173"),
+		DatabaseURL:              os.Getenv("DATABASE_URL"),
+		RedisURL:                 os.Getenv("REDIS_URL"),
+		SessionCookieName:        getEnv("SESSION_COOKIE_NAME", "podcast_hub_session"),
+		SessionTTL:               durationFromSeconds("SESSION_TTL_SECONDS", 60*60*24*14),
+		SessionCookieSecure:      parseBool(getEnv("SESSION_COOKIE_SECURE", "false")),
+		SessionCookieDomain:      os.Getenv("SESSION_COOKIE_DOMAIN"),
+		SessionPepper:            os.Getenv("SESSION_PEPPER"),
+		AuthCodePepper:           os.Getenv("AUTH_CODE_PEPPER"),
+		TurnstileMode:            getEnv("TURNSTILE_MODE", "mock"),
+		TurnstileSiteKey:         os.Getenv("VITE_TURNSTILE_SITE_KEY"),
+		TurnstileSecretKey:       os.Getenv("TURNSTILE_SECRET_KEY"),
+		SMTPHost:                 getEnv("SMTP_HOST", "127.0.0.1"),
+		SMTPPort:                 parseInt(getEnv("SMTP_PORT", "1025"), 1025),
+		SMTPUsername:             os.Getenv("SMTP_USERNAME"),
+		SMTPPassword:             os.Getenv("SMTP_PASSWORD"),
+		SMTPFrom:                 getEnv("SMTP_FROM", "no-reply@example.invalid"),
+		CSRFHeaderName:           getEnv("CSRF_HEADER_NAME", "X-CSRF-Token"),
+		ConnectorPackageLocalDir: getEnv("CONNECTOR_PACKAGE_LOCAL_DIR", ".local/connector-packages"),
 	}
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err

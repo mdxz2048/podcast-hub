@@ -15,6 +15,7 @@ import (
 
 	"github.com/mdxz2048/podcast-hub/config"
 	"github.com/mdxz2048/podcast-hub/internal/auth"
+	"github.com/mdxz2048/podcast-hub/internal/connectors"
 	"github.com/mdxz2048/podcast-hub/internal/security"
 )
 
@@ -23,6 +24,7 @@ type Server struct {
 	auth             *auth.Service
 	turnstile        security.TurnstileVerifier
 	health           HealthDependencies
+	connectors       *connectors.Service
 	resolveSessionFn func(ctx context.Context, token string) (auth.Session, auth.User, error)
 }
 
@@ -41,12 +43,13 @@ type HealthDependencies struct {
 	SMTPPort int
 }
 
-func NewServer(cfg config.Config, authService *auth.Service, turnstile security.TurnstileVerifier, health HealthDependencies) *Server {
+func NewServer(cfg config.Config, authService *auth.Service, turnstile security.TurnstileVerifier, health HealthDependencies, connectorService *connectors.Service) *Server {
 	return &Server{
-		cfg:       cfg,
-		auth:      authService,
-		turnstile: turnstile,
-		health:    health,
+		cfg:        cfg,
+		auth:       authService,
+		turnstile:  turnstile,
+		health:     health,
+		connectors: connectorService,
 	}
 }
 
@@ -77,6 +80,16 @@ func (s *Server) Router() stdhttp.Handler {
 		r.Use(s.RequireAdmin)
 		r.Get("/me", s.handleAdminMe)
 		r.Get("/system/status", s.handleAdminSystemStatus)
+		r.Get("/connectors", s.handleAdminConnectors)
+		r.Post("/connectors/upload", s.handleAdminConnectorUpload)
+		r.Get("/connectors/{connectorId}", s.handleAdminConnector)
+		r.Get("/connectors/{connectorId}/versions", s.handleAdminConnectorVersions)
+		r.Post("/connectors/{connectorId}/disable", s.handleAdminConnectorDisable)
+		r.Post("/connectors/{connectorId}/enable", s.handleAdminConnectorEnable)
+		r.Get("/connector-versions/{versionId}", s.handleAdminConnectorVersion)
+		r.Post("/connector-versions/{versionId}/approve", s.handleAdminConnectorVersionApprove)
+		r.Post("/connector-versions/{versionId}/reject", s.handleAdminConnectorVersionReject)
+		r.Post("/connector-versions/{versionId}/disable", s.handleAdminConnectorVersionDisable)
 	})
 	return router
 }

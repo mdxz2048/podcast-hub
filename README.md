@@ -43,6 +43,24 @@ corepack pnpm dev
 - `GET /auth/me`
 - `GET /admin/me` (admin only)
 - `GET /admin/system/status` (admin only)
+- `GET /admin/connectors` (admin only)
+- `POST /admin/connectors/upload` (admin only, multipart ZIP upload + static validation)
+- `GET /admin/connectors/{connectorId}` (admin only)
+- `GET /admin/connectors/{connectorId}/versions` (admin only)
+- `GET /admin/connector-versions/{versionId}` (admin only)
+- `POST /admin/connector-versions/{versionId}/approve` (admin only)
+- `POST /admin/connector-versions/{versionId}/reject` (admin only)
+- `POST /admin/connector-versions/{versionId}/disable` (admin only)
+- `POST /admin/connectors/{connectorId}/disable` (admin only)
+- `POST /admin/connectors/{connectorId}/enable` (admin only)
+
+## M1.1A scope note
+
+- Connector is an uploaded versioned package, not a Program and not a Source.
+- This phase performs only upload, static validation, registry review, enable/disable states.
+- This phase does **not** execute connector code, does not create Source/ImportJob, and does not download media.
+- Do not upload secrets/cookies/session files/media; manifest secrets are declaration-only.
+- Duoting remains an external future package upload target, not repository-internal platform source code.
 
 ## Admin bootstrap (local only)
 

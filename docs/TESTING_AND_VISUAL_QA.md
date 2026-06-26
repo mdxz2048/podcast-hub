@@ -104,3 +104,18 @@ Frontend:
   - login error
   - forgot-password generic success hint
   - mobile register verify page
+## M1.1A test focus
+
+Backend:
+
+- Admin authz on `/admin/connectors*` APIs.
+- ZIP static validation rules (zip-slip, symlink, forbidden files/extensions, manifest checks).
+- Connector version immutability and review state transitions.
+
+Frontend:
+
+- `/admin/connectors`, `/admin/connectors/new`, `/admin/connectors/:connectorId` real API integration behavior.
+- Empty/loading/error states and admin-only access behavior.
+- No execution/run/download-media controls shown on connector management pages.
+
+This phase does not run screenshot workflows.

@@ -2,9 +2,9 @@
 
 ## 1. Scope
 
-This document defines frontend routes after M1.0 and M1.0C authentication/admin integration.
+This document defines frontend routes after M1.1A connector registry integration.
 
-Account and admin identity routes are connected to real backend APIs. Program, collection, admin business workflow, RSS, and Connector pages remain Mock-data driven.
+Account and admin identity routes are connected to real backend APIs. Connector admin pages are also connected to real APIs in M1.1A. Program/collection/review/import workflow/RSS pages remain Mock-data driven.
 
 ## 2. Public Routes
 
@@ -38,9 +38,9 @@ Account and admin identity routes are connected to real backend APIs. Program, c
 | `/admin/programs` | Program list | M0.1 | Static Program management list. |
 | `/admin/programs/:programId` | Program detail | M0.2B | Static Program operation view with Sources, Episodes, publication, and activity sections. |
 | `/admin/sources` | Source list | M0.2 | Static source status list. |
-| `/admin/connectors` | Connector list | M0.2B | Static registry list. |
-| `/admin/connectors/new` | Connector registration wizard | M0.2B | Static Mock wizard; no real ZIP upload, parsing, validation, or execution. |
-| `/admin/connectors/:connectorId` | Connector detail | M0.2B | Static manifest/status view. |
+| `/admin/connectors` | Connector list | M1.1A | Real admin Connector registry list API. |
+| `/admin/connectors/new` | Connector upload | M1.1A | Real multipart ZIP upload + static validation result display; no execution. |
+| `/admin/connectors/:connectorId` | Connector detail | M1.1A | Real version/review status + manifest summary + enable/disable actions. |
 | `/admin/import-jobs` | Import job list | M0.2B | Static job status list. |
 | `/admin/import-jobs/:jobId` | Import job detail | M0.2B | Static sanitized log, timeline, QR placeholder, and output summary. |
 | `/admin/reviews` | Review queue | M0.2B | Static review queue with Drawer details and confirmation Dialogs. |
@@ -53,6 +53,19 @@ Related real admin APIs in M1.0C:
 
 - `GET /admin/me`
 - `GET /admin/system/status`
+
+Additional real admin Connector APIs in M1.1A:
+
+- `GET /admin/connectors`
+- `POST /admin/connectors/upload`
+- `GET /admin/connectors/{connectorId}`
+- `GET /admin/connectors/{connectorId}/versions`
+- `GET /admin/connector-versions/{versionId}`
+- `POST /admin/connector-versions/{versionId}/approve`
+- `POST /admin/connector-versions/{versionId}/reject`
+- `POST /admin/connector-versions/{versionId}/disable`
+- `POST /admin/connectors/{connectorId}/disable`
+- `POST /admin/connectors/{connectorId}/enable`
 
 ## 5. Route Guard States
 

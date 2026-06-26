@@ -27,10 +27,11 @@ credentials.*
 
 # Local uploads and media artifacts
 uploads/
-storage/
 media/
-audio/
-artifacts/
+downloads/
+staging/
+connector-packages/
+.local/
 *.mp3
 *.m4a
 *.aac
@@ -42,7 +43,6 @@ artifacts/
 *.mov
 
 # Connector packages and runtime outputs
-*.zip
 connector-output/
 job-output/
 tmp/

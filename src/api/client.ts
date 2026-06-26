@@ -5,14 +5,15 @@ export interface ApiError extends Error {
 
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8080";
+  const headers = new Headers(init.headers ?? {});
+  if (!(init.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
   let response: Response;
   try {
     response = await fetch(`${baseURL}${path}`, {
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(init.headers ?? {})
-      },
+      headers,
       ...init
     });
   } catch {

@@ -96,3 +96,12 @@ Development-only promotion of an existing user:
 ```bash
 go run ./cmd/admin seed --email user@example.invalid --promote
 ```
+## M1.1A environment additions
+
+- `CONNECTOR_PACKAGE_LOCAL_DIR` (default: `.local/connector-packages`)
+  - Local development package store root for Connector ZIP quarantine/approved files.
+  - Must remain git-ignored.
+
+Security reminder:
+
+- Never place secrets, session dumps, cookies, tokens, or real media into connector package directories.

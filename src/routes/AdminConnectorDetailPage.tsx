@@ -1,117 +1,180 @@
-import { ArrowLeft, Ban, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { ArrowLeft, Ban, CheckCircle2, XCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import {
+  approveConnectorVersion,
+  disableConnector,
+  disableConnectorVersion,
+  enableConnector,
+  getConnector,
+  getConnectorVersion,
+  listConnectorVersions,
+  rejectConnectorVersion
+} from "../api/connectors";
+import type { AdminConnector, AdminConnectorVersion, ValidationSummary } from "../api/connectors";
+import type { ApiError } from "../api/client";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
-import { KeyValue, MetricCard } from "../components/AdminPrimitives";
-import { Dialog } from "../components/Dialog";
-import { SuccessFeedback } from "../components/StateBlocks";
-import { connectors, jobs, sources } from "../mock/data";
-import { useMockState } from "../mock/MockState";
-import { authModeLabel, connectorKindLabel, connectorStatusLabel, executionModeLabel, ingestionTypeLabel, jobStatusLabel, triggerTypeLabel } from "../utils/labels";
+import { ErrorState, LoadingState, SuccessFeedback } from "../components/StateBlocks";
 
 export function AdminConnectorDetailPage() {
   const { connectorId } = useParams();
-  const [params] = useSearchParams();
-  const [pendingAction, setPendingAction] = useState<"enable" | "disable" | null>(null);
-  const { showToast } = useMockState();
-  const connector = connectors.find((item) => item.id === connectorId);
-  if (!connector) return <div>Connector 不存在</div>;
-  const boundSources = sources.filter((source) => connector.boundSourceIds.includes(source.id));
-  const relatedJobs = jobs.filter((job) => job.connectorId === connector.id);
-  const disabled = params.get("state") === "disabled";
+  const [connector, setConnector] = useState<AdminConnector | null>(null);
+  const [versions, setVersions] = useState<AdminConnectorVersion[]>([]);
+  const [selectedVersion, setSelectedVersion] = useState<AdminConnectorVersion | null>(null);
+  const [selectedValidation, setSelectedValidation] = useState<ValidationSummary | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  async function load() {
+    if (!connectorId) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [connectorResult, versionsResult] = await Promise.all([
+        getConnector(connectorId),
+        listConnectorVersions(connectorId)
+      ]);
+      setConnector(connectorResult.connector);
+      setVersions(versionsResult.versions);
+      if (versionsResult.versions.length > 0) {
+        const first = versionsResult.versions[0];
+        const detail = await getConnectorVersion(first.id);
+        setSelectedVersion(detail.version);
+        setSelectedValidation(detail.validation_summary);
+      }
+    } catch (e) {
+      const apiError = e as ApiError;
+      setError(apiError.message || "加载 Connector 详情失败。");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, [connectorId]);
+
+  async function selectVersion(version: AdminConnectorVersion) {
+    try {
+      const detail = await getConnectorVersion(version.id);
+      setSelectedVersion(detail.version);
+      setSelectedValidation(detail.validation_summary);
+    } catch {
+      setSelectedVersion(version);
+      setSelectedValidation(null);
+    }
+  }
+
+  async function runAction(action: "enable_connector" | "disable_connector" | "approve" | "reject" | "disable_version") {
+    if (!connector || !selectedVersion) return;
+    setError(null);
+    setSuccess(null);
+    try {
+      if (action === "enable_connector") {
+        await enableConnector(connector.id);
+      } else if (action === "disable_connector") {
+        await disableConnector(connector.id);
+      } else if (action === "approve") {
+        await approveConnectorVersion(selectedVersion.id);
+      } else if (action === "reject") {
+        await rejectConnectorVersion(selectedVersion.id);
+      } else {
+        await disableConnectorVersion(selectedVersion.id);
+      }
+      setSuccess("状态更新成功。");
+      await load();
+    } catch (e) {
+      const apiError = e as ApiError;
+      setError(apiError.message || "状态更新失败。");
+    }
+  }
 
   return (
     <div className="grid gap-6">
       <Link to="/admin/connectors" className="inline-flex items-center gap-2 text-sm text-secondary hover:text-action">
         <ArrowLeft className="h-4 w-4" /> 返回 Connector 列表
       </Link>
-      <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="flex flex-wrap gap-2">
-              <Badge tone={disabled ? "danger" : connector.status === "approved" || connector.status === "native_builtin" ? "success" : "warning"}>{disabled ? "已禁用" : connectorStatusLabel[connector.status]}</Badge>
-              <Badge>{connectorKindLabel[connector.kind]}</Badge>
-            </div>
-            <h1 className="mt-3 text-3xl font-semibold leading-tight md:text-4xl">{connector.name}</h1>
-            <p className="mt-2 text-secondary">版本 {connector.version} · {connector.nextAction}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button icon={<CheckCircle2 className="h-4 w-4" />} onClick={() => setPendingAction("enable")}>启用 Mock</Button>
-            <Button variant="danger" icon={<Ban className="h-4 w-4" />} onClick={() => setPendingAction("disable")}>禁用 Mock</Button>
-          </div>
-        </div>
-      </section>
-      {params.get("toast") === "success" ? <SuccessFeedback message="Connector 操作已写入模拟状态，未上传、解压或执行任何 ZIP。" /> : null}
-      <section className="grid gap-4 md:grid-cols-3">
-        <MetricCard title="绑定来源" value={String(boundSources.length)} note="Source 通过 connectorId 绑定" />
-        <MetricCard title="最近任务" value={jobStatusLabel[connector.lastJobStatus]} note="任务结果不会直接发布 RSS" />
-        <MetricCard title="资源限制" value={`${connector.resourceLimits.memoryMb} MB`} note={`${connector.resourceLimits.timeoutSeconds}s / ${connector.resourceLimits.maxDownloadMb} MB`} />
-      </section>
-      <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <section className="rounded-lg border border-border bg-surface p-5">
-          <h2 className="mb-4 text-lg font-semibold">Manifest 摘要</h2>
-          <dl className="grid gap-4 sm:grid-cols-2">
-            <KeyValue label="ingestion_type" value={connector.supportedIngestionTypes.map((item) => ingestionTypeLabel[item]).join(" / ")} />
-            <KeyValue label="trigger_type" value={connector.supportedTriggerTypes.map((item) => triggerTypeLabel[item]).join(" / ")} />
-            <KeyValue label="auth_mode" value={connector.authModes.map((item) => authModeLabel[item]).join(" / ")} />
-            <KeyValue label="execution_mode" value={connector.executionModes.map((item) => executionModeLabel[item]).join(" / ")} />
-            <KeyValue label="入口文件" value={connector.entrypoint} />
-            <KeyValue label="依赖锁" value={connector.dependencyLock} />
-          </dl>
-          <div className="mt-4 rounded-lg border border-warning/30 bg-warning/5 p-4 text-sm text-secondary">
-            Connector 始终按不可信代码处理。M0.2B 不读取、上传、解压、校验或执行真实 ZIP。
-          </div>
-        </section>
-        <section className="rounded-lg border border-border bg-surface p-5">
-          <h2 className="mb-4 text-lg font-semibold">网络和绑定</h2>
-          <div className="grid gap-3">
-            <Info label="申请域名白名单" value={connector.networkPolicy.length > 0 ? connector.networkPolicy.join(", ") : "不申请外部网络"} />
-            <Info label="绑定来源" value={boundSources.map((source) => source.name).join("、") || "暂无绑定"} />
-            <Info label="最近任务" value={relatedJobs.map((job) => `${job.id}: ${jobStatusLabel[job.status]}`).join("；") || "暂无任务"} />
-          </div>
-        </section>
-        <section className="rounded-lg border border-border bg-surface p-5 xl:col-span-2">
-          <h2 className="mb-4 text-lg font-semibold">版本历史</h2>
-          <div className="grid gap-3 md:grid-cols-2">
-            {connector.versionHistory.map((version) => (
-              <div key={version.version} className="rounded-lg border border-border p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="font-semibold">{version.version}</span>
-                  <Badge>{connectorStatusLabel[version.status]}</Badge>
+      {isLoading ? <LoadingState title="正在加载 Connector 详情" /> : null}
+      {error ? <ErrorState title={error} /> : null}
+      {success ? <SuccessFeedback message={success} /> : null}
+      {connector && !isLoading ? (
+        <>
+          <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <div className="flex flex-wrap gap-2">
+                  <Badge tone={connector.status === "active" ? "success" : "warning"}>{connector.status === "active" ? "已启用" : "已禁用"}</Badge>
+                  <Badge>{connector.slug}</Badge>
                 </div>
-                <p className="mt-2 text-sm text-muted">{version.date}</p>
+                <h1 className="mt-3 text-3xl font-semibold leading-tight md:text-4xl">{connector.name}</h1>
+                <p className="mt-2 text-secondary">{connector.description || "暂无描述"}</p>
               </div>
-            ))}
-          </div>
-        </section>
-      </div>
-      <Dialog
-        open={pendingAction !== null}
-        title={pendingAction === "disable" ? "禁用 Connector" : "启用 Connector"}
-        description={pendingAction === "disable"
-          ? `确认禁用「${connector.name}」？禁用后绑定来源无法启动新任务。`
-          : `确认启用「${connector.name}」？启用后来源可继续发起导入任务。`}
-        confirmLabel={pendingAction === "disable" ? "确认禁用" : "确认启用"}
-        onCancel={() => setPendingAction(null)}
-        onConfirm={() => {
-          showToast({
-            tone: "success",
-            title: pendingAction === "disable" ? "Connector 已禁用" : "Connector 已启用",
-            message: "仅更新模拟状态，没有执行真实 Connector。"
-          });
-          setPendingAction(null);
-        }}
-      />
-    </div>
-  );
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-border bg-subtle p-4">
-      <p className="text-xs text-muted">{label}</p>
-      <p className="mt-1 text-sm font-medium">{value}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button icon={<CheckCircle2 className="h-4 w-4" />} onClick={() => void runAction("enable_connector")}>启用 Connector</Button>
+                <Button variant="danger" icon={<Ban className="h-4 w-4" />} onClick={() => void runAction("disable_connector")}>禁用 Connector</Button>
+              </div>
+            </div>
+            <div className="mt-4 rounded-lg border border-warning/30 bg-warning/5 p-4 text-sm text-secondary">
+              本页仅展示登记与审核状态，不提供执行、下载媒体、创建 Source 或运行任务按钮。
+            </div>
+          </section>
+          <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+            <div className="rounded-lg border border-border bg-surface p-5">
+              <h2 className="mb-4 text-lg font-semibold">版本列表</h2>
+              <div className="grid gap-3">
+                {versions.map((version) => (
+                  <button key={version.id} className={`rounded-lg border p-4 text-left ${selectedVersion?.id === version.id ? "border-action bg-subtle" : "border-border bg-surface"}`} onClick={() => void selectVersion(version)}>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-semibold">{version.version}</span>
+                      <Badge>{version.review_status}</Badge>
+                    </div>
+                    <p className="mt-1 text-xs text-muted">runtime={version.runtime_profile} · {version.entrypoint}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-lg border border-border bg-surface p-5">
+              <h2 className="mb-4 text-lg font-semibold">版本详情</h2>
+              {selectedVersion ? (
+                <div className="grid gap-4">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge>{selectedVersion.review_status}</Badge>
+                    <Badge>{selectedVersion.runtime_profile}</Badge>
+                  </div>
+                  <div className="grid gap-2 text-sm">
+                    <div>Entrypoint: <code>{selectedVersion.entrypoint}</code></div>
+                    <div>SHA256: <code>{selectedVersion.package_sha256}</code></div>
+                    <div>包大小: {selectedVersion.package_size_bytes} bytes</div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button onClick={() => void runAction("approve")}>Approve</Button>
+                    <Button variant="secondary" icon={<XCircle className="h-4 w-4" />} onClick={() => void runAction("reject")}>Reject</Button>
+                    <Button variant="danger" icon={<Ban className="h-4 w-4" />} onClick={() => void runAction("disable_version")}>Disable 版本</Button>
+                  </div>
+                  <div className="rounded-lg border border-border bg-subtle p-4">
+                    <p className="text-sm font-semibold">Manifest 摘要</p>
+                    <pre className="mt-2 max-h-64 overflow-auto text-xs text-secondary">{JSON.stringify(selectedVersion.manifest, null, 2)}</pre>
+                  </div>
+                  <div className="rounded-lg border border-border bg-subtle p-4">
+                    <p className="text-sm font-semibold">Validation Summary</p>
+                    {selectedValidation ? (
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-secondary">
+                        {selectedValidation.issues.length === 0 ? <li>无校验问题</li> : selectedValidation.issues.map((issue) => (
+                          <li key={`${issue.code}-${issue.path ?? ""}`}>{issue.message}{issue.path ? `（${issue.path}）` : ""}</li>
+                        ))}
+                      </ul>
+                    ) : <p className="mt-2 text-xs text-secondary">暂无详细校验信息。</p>}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-secondary">暂无版本。</p>
+              )}
+            </div>
+          </section>
+        </>
+      ) : null}
     </div>
   );
 }

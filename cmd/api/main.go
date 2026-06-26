@@ -14,6 +14,7 @@ import (
 
 	"github.com/mdxz2048/podcast-hub/config"
 	"github.com/mdxz2048/podcast-hub/internal/auth"
+	"github.com/mdxz2048/podcast-hub/internal/connectors"
 	httpserver "github.com/mdxz2048/podcast-hub/internal/http"
 	"github.com/mdxz2048/podcast-hub/internal/mail"
 	"github.com/mdxz2048/podcast-hub/internal/ratelimit"
@@ -54,6 +55,9 @@ func main() {
 	}
 	mailerImpl := mail.NewSMTPMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPFrom)
 	store := postgres.NewAuthStore(dbPool)
+	connectorStore := postgres.NewConnectorStore(dbPool)
+	connectorPackageStore := connectors.NewLocalPackageStore(cfg.ConnectorPackageLocalDir)
+	connectorService := connectors.NewService(connectorStore, connectorPackageStore)
 	authService := auth.NewService(store, mailerImpl, turnstileVerifier, limiter, auth.Options{
 		SessionPepper:    cfg.SessionPepper,
 		AuthCodePepper:   cfg.AuthCodePepper,
@@ -68,7 +72,7 @@ func main() {
 		Redis:    redisClient,
 		SMTPHost: cfg.SMTPHost,
 		SMTPPort: cfg.SMTPPort,
-	})
+	}, connectorService)
 	httpSrv := &stdhttp.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           server.Router(),

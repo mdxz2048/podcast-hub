@@ -1,63 +1,78 @@
-import { Plus, ShieldCheck } from "lucide-react";
+import { Plus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { listConnectors } from "../api/connectors";
+import type { AdminConnector } from "../api/connectors";
+import type { ApiError } from "../api/client";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { SearchBar } from "../components/Form";
 import { PageHeader } from "../components/PageShell";
-import { connectors, sources } from "../mock/data";
-import { authModeLabel, connectorKindLabel, connectorStatusLabel, jobStatusLabel, triggerTypeLabel } from "../utils/labels";
+import { EmptyState, ErrorState, LoadingState } from "../components/StateBlocks";
 
 export function AdminConnectorsPage() {
   const [params] = useSearchParams();
+  const [connectors, setConnectors] = useState<AdminConnector[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const query = params.get("q") ?? "";
-  const visible = connectors.filter((connector) => `${connector.name} ${connector.kind}`.toLowerCase().includes(query.toLowerCase()));
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const result = await listConnectors();
+        if (!active) return;
+        setConnectors(result.connectors);
+      } catch (e) {
+        if (!active) return;
+        const apiError = e as ApiError;
+        setError(apiError.message || "加载 Connector 列表失败。");
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const visible = useMemo(() => connectors.filter((connector) => `${connector.slug} ${connector.name}`.toLowerCase().includes(query.toLowerCase())), [connectors, query]);
 
   return (
     <div>
-      <PageHeader eyebrow="Connector Registry" title="管理内容接入能力和版本状态">
+      <PageHeader eyebrow="Connector Registry" title="管理通用 Connector 上传版本与审核状态">
         <Link to="/admin/connectors/new">
-          <Button icon={<Plus className="h-4 w-4" />}>登记 Connector</Button>
+          <Button icon={<Plus className="h-4 w-4" />}>上传 Connector ZIP</Button>
         </Link>
       </PageHeader>
       <div className="mb-5 rounded-lg border border-border bg-surface p-4">
-        <SearchBar placeholder="搜索 Connector 或接入方式" defaultValue={query} />
+        <SearchBar placeholder="搜索 Connector 名称或 slug" defaultValue={query} />
       </div>
-      <div className="grid gap-4">
-        {visible.map((connector) => {
-          const boundSources = sources.filter((source) => connector.boundSourceIds.includes(source.id));
-          return (
+      {isLoading ? <LoadingState title="正在加载 Connector 列表" /> : null}
+      {error ? <ErrorState title={error} /> : null}
+      {!isLoading && !error && visible.length === 0 ? <EmptyState title="暂无 Connector" /> : null}
+      {!isLoading && !error ? (
+        <div className="grid gap-4">
+          {visible.map((connector) => (
             <article key={connector.id} className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="min-w-0">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
                   <div className="flex flex-wrap gap-2">
-                    <Badge tone={connector.status === "approved" || connector.status === "native_builtin" ? "success" : "warning"}>{connectorStatusLabel[connector.status]}</Badge>
-                    <Badge>{connectorKindLabel[connector.kind]}</Badge>
+                    <Badge tone={connector.status === "active" ? "success" : "warning"}>{connector.status === "active" ? "已启用" : "已禁用"}</Badge>
+                    <Badge>{connector.slug}</Badge>
                   </div>
                   <h2 className="mt-3 text-xl font-semibold">{connector.name}</h2>
-                  <p className="mt-2 text-sm text-secondary">版本 {connector.version} · 最近任务 {jobStatusLabel[connector.lastJobStatus]} · {connector.nextAction}</p>
+                  <p className="mt-1 text-sm text-secondary">{connector.description || "暂无描述"}</p>
                 </div>
                 <Link to={`/admin/connectors/${connector.id}`}>
-                  <Button variant="secondary" icon={<ShieldCheck className="h-4 w-4" />}>查看详情</Button>
+                  <Button variant="secondary">查看详情</Button>
                 </Link>
               </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <Info label="支持触发" value={connector.supportedTriggerTypes.map((item) => triggerTypeLabel[item]).join(" / ")} />
-                <Info label="授权模式" value={connector.authModes.map((item) => authModeLabel[item]).join(" / ")} />
-                <Info label="绑定来源" value={`${boundSources.length} 个`} />
-              </div>
             </article>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-border bg-subtle p-3">
-      <p className="text-xs text-muted">{label}</p>
-      <p className="mt-1 text-sm font-medium">{value}</p>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -496,3 +496,10 @@ Logs must be structured and redacted.
 - Output artifact validation errors should not corrupt existing approved episodes.
 - Verification codes and reset proofs are single-use and short-lived.
 - Password reset invalidates old sessions.
+## M1.1A Connector Registry Increment
+
+- Added platform-side Connector Registry tables: `connectors`, `connector_versions`, `connector_events`.
+- Added admin-only registry APIs for upload, validation result query, review actions, and connector enable/disable.
+- Added development filesystem package store under `.local/connector-packages/` for quarantine and approved artifacts.
+- Upload pipeline is static and safety-first: no Python execution, no shell execution, no Docker, no media ingestion.
+- Program/Source/ImportJob pipelines remain outside M1.1A implementation scope.

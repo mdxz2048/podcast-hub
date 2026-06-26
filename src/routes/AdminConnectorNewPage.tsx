@@ -1,95 +1,88 @@
-import { CheckCircle2, FileArchive, ShieldAlert } from "lucide-react";
-import { useState } from "react";
-import { Badge } from "../components/Badge";
+import { FormEvent, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { uploadConnectorPackage } from "../api/connectors";
+import type { ValidationSummary } from "../api/connectors";
+import type { ApiError } from "../api/client";
 import { Button } from "../components/Button";
 import { Input } from "../components/Form";
 import { PageHeader } from "../components/PageShell";
-import { SuccessFeedback } from "../components/StateBlocks";
-import { useMockState } from "../mock/MockState";
-
-const steps = ["选择接入方式", "模拟包信息", "Manifest 摘要", "权限审核"];
+import { ErrorState, LoadingState, SuccessFeedback } from "../components/StateBlocks";
 
 export function AdminConnectorNewPage() {
-  const [step, setStep] = useState(0);
-  const [registered, setRegistered] = useState(false);
-  const { showToast } = useMockState();
+  const navigate = useNavigate();
+  const [connectorID, setConnectorID] = useState("");
+  const [version, setVersion] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [validation, setValidation] = useState<ValidationSummary | null>(null);
+  const [createdConnectorId, setCreatedConnectorId] = useState<string | null>(null);
 
-  function finish() {
-    setRegistered(true);
-    showToast({ tone: "success", title: "已登记", message: "模拟 Connector 已登记，未读取或上传真实 ZIP。" });
+  async function submitUpload(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setValidation(null);
+    if (!file) {
+      setError("请选择一个 Connector ZIP 文件。");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const result = await uploadConnectorPackage({
+        connector_id: connectorID.trim(),
+        version: version.trim(),
+        file
+      });
+      setValidation(result.validation_summary);
+      setCreatedConnectorId(result.connector.id);
+      if (result.validation_summary.is_valid) {
+        navigate(`/admin/connectors/${result.connector.id}`);
+      }
+    } catch (e) {
+      const apiError = e as ApiError;
+      setError(apiError.message || "上传失败，请稍后重试。");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
     <div className="grid gap-6">
-      <PageHeader eyebrow="Connector 注册向导" title="静态验证未来上传 Connector 包的体验" />
+      <PageHeader eyebrow="Connector 上传" title="上传并登记 Python Connector ZIP（仅静态校验）" />
       <section className="rounded-lg border border-warning/30 bg-warning/5 p-4 text-sm text-secondary">
-        当前为静态演示：不读取、解压、执行或上传真实 ZIP；不接受真实凭据；不申请真实网络权限。
+        平台仅做上传登记与安全校验，不会执行 Connector，不会调用 Python，不会下载媒体。请勿上传 Secret、Cookie、Session、媒体文件或 Dockerfile。
       </section>
-      {registered ? <SuccessFeedback message="模拟登记完成。真实版本仍需要包校验、人工审核和隔离执行策略。" /> : null}
-      <div className="grid gap-3 md:grid-cols-4">
-        {steps.map((label, index) => (
-          <button key={label} className={`rounded-lg border p-4 text-left ${step === index ? "border-action bg-subtle" : "border-border bg-surface"}`} onClick={() => setStep(index)}>
-            <p className="text-xs text-muted">步骤 {index + 1}</p>
-            <p className="font-semibold">{label}</p>
-          </button>
-        ))}
-      </div>
-      <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
-        {step === 0 ? (
-          <div className="grid gap-4 md:grid-cols-3">
-            {["平台内建 Native RSS Importer", "Python Connector ZIP", "人工导入工作流"].map((item) => (
-              <div key={item} className="rounded-lg border border-border p-4">
-                <FileArchive className="mb-3 h-5 w-5 text-action" />
-                <h2 className="font-semibold">{item}</h2>
-                <p className="mt-2 text-sm text-secondary">仅用于选择接入方式，不上传真实文件。</p>
-              </div>
+      {isSubmitting ? <LoadingState title="正在上传并校验 Connector ZIP" /> : null}
+      {error ? <ErrorState title={error} /> : null}
+      {validation?.is_valid ? <SuccessFeedback message="上传成功，版本已登记为 pending_review，等待管理员审核。" /> : null}
+      <form className="grid gap-5 rounded-lg border border-border bg-surface p-6 shadow-subtle" onSubmit={submitUpload}>
+        <Input label="Connector ID（slug）" value={connectorID} onChange={(event) => setConnectorID(event.target.value)} placeholder="example-connector" />
+        <Input label="Version（semver）" value={version} onChange={(event) => setVersion(event.target.value)} placeholder="1.0.0" />
+        <label className="grid gap-2 text-sm">
+          <span className="font-medium text-primary">Connector ZIP 文件</span>
+          <input
+            type="file"
+            accept=".zip,application/zip"
+            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            className="rounded-md border border-border bg-subtle p-2"
+          />
+          <span className="text-xs text-secondary">{file ? `已选择：${file.name}` : "仅支持 Python Connector ZIP"}</span>
+        </label>
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" disabled={isSubmitting}>上传并校验</Button>
+          {createdConnectorId ? <Button type="button" variant="secondary" onClick={() => navigate(`/admin/connectors/${createdConnectorId}`)}>查看详情</Button> : null}
+        </div>
+      </form>
+      {validation && !validation.is_valid ? (
+        <section className="rounded-lg border border-danger/30 bg-danger/5 p-5">
+          <h2 className="text-lg font-semibold">校验失败</h2>
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-secondary">
+            {validation.issues.map((issue) => (
+              <li key={`${issue.code}-${issue.path ?? ""}`}>{issue.message}{issue.path ? `（${issue.path}）` : ""}</li>
             ))}
-          </div>
-        ) : null}
-        {step === 1 ? (
-          <div className="grid gap-4">
-            <Input label="模拟包名称" defaultValue="partner-archive-connector-1.5.0.zip" />
-            <div className="rounded-lg border border-dashed border-strong bg-subtle p-5 text-sm text-secondary">
-              这里展示模拟文件名，不打开本地文件选择器，不读取磁盘，不解压 ZIP。
-            </div>
-          </div>
-        ) : null}
-        {step === 2 ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            <Info label="runtime" value="python 3.12" />
-            <Info label="entrypoint" value="src/main.py" />
-            <Info label="auth_mode" value="reusable_session" />
-            <Info label="trigger_type" value="manual / scheduled" />
-            <Info label="域名白名单" value="archive.example.invalid" />
-            <Info label="限制" value="512 MB / 600s / 512 MB 下载" />
-          </div>
-        ) : null}
-        {step === 3 ? (
-          <div className="grid gap-4">
-            <div className="flex flex-wrap gap-2">
-              <Badge tone="success">校验通过</Badge>
-              <Badge tone="warning">权限待审核</Badge>
-              <Badge>版本 1.5.0</Badge>
-            </div>
-            <div className="rounded-lg border border-warning/30 bg-warning/5 p-4">
-              <div className="flex items-center gap-2 font-semibold">
-                <ShieldAlert className="h-5 w-5 text-warning" /> 下一步建议
-              </div>
-              <p className="mt-2 text-sm text-secondary">审核域名白名单和资源限制，通过后才允许绑定到 Source。</p>
-            </div>
-            <Button icon={<CheckCircle2 className="h-4 w-4" />} onClick={finish}>登记模拟 Connector</Button>
-          </div>
-        ) : null}
-      </section>
-    </div>
-  );
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-border bg-subtle p-4">
-      <p className="text-xs text-muted">{label}</p>
-      <p className="mt-1 font-medium">{value}</p>
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }

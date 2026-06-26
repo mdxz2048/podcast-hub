@@ -38,11 +38,7 @@ async function mockAuthApi(page: Page, initialUser: AuthUser | null = null) {
     }
     if (request.method() === "POST" && url.pathname.endsWith("/auth/login")) {
       const body = JSON.parse(request.postData() ?? "{}") as { email?: string };
-      if (body.email?.startsWith("admin")) {
-        sessionUser = buildUser("admin");
-      } else {
-        sessionUser = buildUser("user");
-      }
+      sessionUser = body.email?.startsWith("admin") ? buildUser("admin") : buildUser("user");
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -52,11 +48,67 @@ async function mockAuthApi(page: Page, initialUser: AuthUser | null = null) {
     }
     if (request.method() === "POST" && url.pathname.endsWith("/auth/logout")) {
       sessionUser = null;
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: "logged_out" }) });
+      return;
+    }
+    await route.fulfill({ status: 404, body: "not mocked" });
+  });
+}
+
+async function mockConnectorAdminApi(page: Page) {
+  const connectors = [{ id: "c1", slug: "example-connector", name: "Example Connector", description: "for test", status: "active", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" }];
+  const versions = [{ id: "v1", connector_id: "c1", version: "1.0.0", review_status: "pending_review", runtime_profile: "python-basic", entrypoint: "src/connector.py", manifest: { id: "example-connector", version: "1.0.0" }, package_sha256: "abc", package_size_bytes: 100, validation_summary_json: "{\"is_valid\":true,\"issues\":[]}", created_at: "2026-01-01T00:00:00Z" }];
+  await page.route("http://127.0.0.1:8080/admin/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/connectors")) {
+      const body = JSON.stringify({ connectors: url.searchParams.get("empty") === "1" ? [] : connectors });
+      await route.fulfill({ status: 200, contentType: "application/json", body });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/connectors/c1")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ connector: connectors[0] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/connectors/c1/versions")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ versions }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/connector-versions/v1")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ version: versions[0], validation_summary: { is_valid: true, issues: [] } }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/connectors/upload")) {
+      const contentType = (await request.headerValue("content-type")) ?? "";
+      if (!contentType.includes("multipart/form-data")) {
+        await route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: { code: "invalid_upload", message: "bad form" } }) });
+        return;
+      }
+      if ((request.postData() ?? "").includes("invalid")) {
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify({
+            connector: connectors[0],
+            version: versions[0],
+            validation_summary: { is_valid: false, issues: [{ code: "manifest_invalid", message: "manifest 失败", path: "manifest.yaml" }] }
+          })
+        });
+        return;
+      }
       await route.fulfill({
-        status: 200,
+        status: 201,
         contentType: "application/json",
-        body: JSON.stringify({ status: "logged_out" })
+        body: JSON.stringify({ connector: connectors[0], version: versions[0], validation_summary: { is_valid: true, issues: [] } })
       });
+      return;
+    }
+    if (request.method() === "POST" && (url.pathname.endsWith("/approve") || url.pathname.endsWith("/reject") || url.pathname.endsWith("/disable"))) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ version: versions[0] }) });
+      return;
+    }
+    if (request.method() === "POST" && (url.pathname.endsWith("/admin/connectors/c1/enable") || url.pathname.endsWith("/admin/connectors/c1/disable"))) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ connector: connectors[0] }) });
       return;
     }
     await route.fulfill({ status: 404, body: "not mocked" });
@@ -114,4 +166,46 @@ test("auth state is not persisted in local/session storage", async ({ page }) =>
   }));
   expect(storageCounts.local).toBe(0);
   expect(storageCounts.session).toBe(0);
+});
+
+test("admin connectors list shows empty state", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+  await page.route("http://127.0.0.1:8080/admin/connectors", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ connectors: [] }) });
+  });
+  await page.goto("/admin/connectors");
+  await expect(page.getByText("暂无 Connector")).toBeVisible();
+});
+
+test("admin can upload zip and see pending review", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+  await page.goto("/admin/connectors/new");
+  await page.getByLabel("Connector ID（slug）").fill("example-connector");
+  await page.getByLabel("Version（semver）").fill("1.0.0");
+  await page.setInputFiles("input[type=file]", { name: "connector.zip", mimeType: "application/zip", buffer: Buffer.from("ok") });
+  await page.getByRole("button", { name: "上传并校验" }).click();
+  await expect(page).toHaveURL(/\/admin\/connectors\/c1$/);
+});
+
+test("invalid upload shows validation issues", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+  await page.goto("/admin/connectors/new");
+  await page.getByLabel("Connector ID（slug）").fill("example-connector");
+  await page.getByLabel("Version（semver）").fill("1.0.0");
+  await page.setInputFiles("input[type=file]", { name: "invalid.zip", mimeType: "application/zip", buffer: Buffer.from("invalid") });
+  await page.getByRole("button", { name: "上传并校验" }).click();
+  await expect(page.getByText("校验失败")).toBeVisible();
+});
+
+test("version actions are visible and runtime buttons are absent", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+  await page.goto("/admin/connectors/c1");
+  await expect(page.getByRole("button", { name: "Approve" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Reject" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "运行" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "下载媒体" })).toHaveCount(0);
 });

@@ -4,12 +4,19 @@
 
 The Job Protocol defines how the platform communicates with Connectors and how Connectors return events and outputs.
 
+Status in M1.1A: protocol definition only. Connector execution is not implemented in this phase.
+
 The protocol is intentionally file and stream based:
 
 - Platform gives one JSON input document to one job.
 - Connector emits JSON Lines events to stdout.
 - Connector writes standardized episode JSON files and allowed artifacts to its assigned output directory.
 - Connector exits after one import attempt.
+
+M1.1A non-goal reminder:
+
+- Platform does not run connector code yet.
+- Platform does not create Source/ImportJob from uploaded package.
 
 ## 2. Protocol Guarantees
 
