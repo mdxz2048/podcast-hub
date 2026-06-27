@@ -3,6 +3,7 @@ import { apiRequest } from "./client";
 export interface RunnerStatus {
   mode: "disabled" | "docker_trusted_admin";
   can_run_jobs: boolean;
+  code: "runner_disabled" | "runner_enabled";
   reason: string;
 }
 

@@ -44,7 +44,7 @@ func (s *Server) handleAdminImportJobCreate(w stdhttp.ResponseWriter, r *stdhttp
 		s.writeJobError(w, r, err)
 		return
 	}
-	writeJSON(w, stdhttp.StatusCreated, map[string]any{"job": job})
+	writeJSON(w, stdhttp.StatusCreated, map[string]any{"job": job, "runner": s.runnerStatus()})
 }
 
 func (s *Server) handleAdminImportJob(w stdhttp.ResponseWriter, r *stdhttp.Request) {

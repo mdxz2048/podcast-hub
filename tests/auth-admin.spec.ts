@@ -85,7 +85,7 @@ async function mockConnectorAdminApi(page: Page) {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ api: "ok", runner: { mode: "disabled", can_run_jobs: false, reason: "RUNNER_MODE=disabled; queued Import Jobs will not execute until a separate Runner is started." } })
+        body: JSON.stringify({ api: "ok", runner: { mode: "disabled", can_run_jobs: false, code: "runner_disabled", reason: "RUNNER_MODE=disabled; queued Import Jobs will not execute until a separate Runner is started." } })
       });
       return;
     }

@@ -129,6 +129,12 @@ Security reminder:
   - Placeholder-only local/internal Alpha environment file.
   - Copy to `.env.alpha` and replace every placeholder locally.
   - Do not commit `.env.alpha`.
+- `POSTGRES_PASSWORD`
+  - Placeholder for local/internal Alpha PostgreSQL.
+  - Replace locally; do not use the example value outside disposable development.
+- `STAGING_STORE_DIR` and `MEDIA_STORE_DIR`
+  - Private Alpha volume mount points.
+  - Not served by the frontend or API as static public files.
 
 Generate a local Secret Master Key with one of:
 

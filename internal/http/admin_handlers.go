@@ -50,16 +50,19 @@ func (s *Server) handleAdminSystemStatus(w stdhttp.ResponseWriter, r *stdhttp.Re
 }
 
 func (s *Server) handleHealthz(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	writeJSON(w, stdhttp.StatusOK, map[string]any{"status": "ok"})
+}
+
+func (s *Server) handleReadyz(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
-	writeJSON(w, stdhttp.StatusOK, map[string]any{
-		"api": "ok",
-		"dependencies": map[string]any{
-			"database": s.pingDatabase(ctx),
-			"redis":    s.pingRedis(ctx),
-			"mailpit":  s.pingSMTP(ctx),
-		},
-	})
+	db := s.pingDatabase(ctx)
+	redis := s.pingRedis(ctx)
+	if db == "ok" && (redis == "ok" || redis == "unknown") {
+		writeJSON(w, stdhttp.StatusOK, map[string]any{"status": "ready"})
+		return
+	}
+	writeJSON(w, stdhttp.StatusServiceUnavailable, map[string]any{"status": "not_ready"})
 }
 
 func (s *Server) runnerStatus() map[string]any {
@@ -72,8 +75,10 @@ func (s *Server) runnerStatus() map[string]any {
 		"can_run_jobs": mode == "docker_trusted_admin",
 	}
 	if mode == "disabled" {
+		status["code"] = "runner_disabled"
 		status["reason"] = "RUNNER_MODE=disabled; queued Import Jobs will not execute until a separate Runner is started."
 	} else {
+		status["code"] = "runner_enabled"
 		status["reason"] = "RUNNER_MODE=docker_trusted_admin; only trusted-admin fixture execution is supported."
 	}
 	return status

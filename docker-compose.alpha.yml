@@ -4,45 +4,83 @@ services:
     environment:
       POSTGRES_DB: podcast_hub
       POSTGRES_USER: podcast_hub
-      POSTGRES_PASSWORD: change_me_alpha_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_alpha_password}
     ports:
       - "5432:5432"
     volumes:
       - alpha_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U podcast_hub -d podcast_hub"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    volumes:
+      - alpha_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   mailpit:
     image: axllent/mailpit:latest
     ports:
       - "1025:1025"
       - "8025:8025"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8025"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   api:
     build:
       context: .
       dockerfile: Dockerfile.alpha
-    env_file:
-      - .env.alpha
     environment:
-      DATABASE_URL: postgresql://podcast_hub:change_me_alpha_password@postgres:5432/podcast_hub?sslmode=disable
+      APP_ENV: ${APP_ENV:-development}
+      HTTP_ADDR: ${HTTP_ADDR:-:8080}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://127.0.0.1:4173}
+      DATABASE_URL: postgresql://podcast_hub:${POSTGRES_PASSWORD:-change_me_alpha_password}@postgres:5432/podcast_hub?sslmode=disable
       REDIS_URL: redis://redis:6379/0
+      SESSION_PEPPER: ${SESSION_PEPPER:-replace_with_alpha_session_pepper}
+      AUTH_CODE_PEPPER: ${AUTH_CODE_PEPPER:-replace_with_alpha_auth_code_pepper}
+      TURNSTILE_MODE: ${TURNSTILE_MODE:-mock}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-replace_with_turnstile_secret}
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
+      SMTP_FROM: ${SMTP_FROM:-no-reply@example.invalid}
+      SECRETS_MASTER_KEY: ${SECRETS_MASTER_KEY:-0123456789abcdef0123456789abcdef}
+      CONNECTOR_PACKAGE_LOCAL_DIR: /data/connector-packages
       RUNNER_MODE: disabled
     depends_on:
-      - postgres
-      - redis
-      - mailpit
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
     ports:
       - "8080:8080"
     volumes:
       - alpha_connector_packages:/data/connector-packages
+      - alpha_staging_store:/data/staging
+      - alpha_media_store:/data/media
     command: ["/app/api"]
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   alpha_postgres_data:
+  alpha_redis_data:
   alpha_connector_packages:
+  alpha_staging_store:
+  alpha_media_store:

@@ -58,6 +58,12 @@ Health check:
 curl http://127.0.0.1:8080/healthz
 ```
 
+Readiness check:
+
+```bash
+curl http://127.0.0.1:8080/readyz
+```
+
 Mailpit UI:
 
 ```text
@@ -81,7 +87,7 @@ Default Alpha API mode is:
 RUNNER_MODE=disabled
 ```
 
-Queued Import Jobs remain queued until a separate Runner is explicitly started.
+Queued Import Jobs remain queued until a separate Runner is explicitly started. Runner disabled does not make API readiness fail.
 
 For trusted-admin fixture execution only:
 

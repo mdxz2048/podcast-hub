@@ -55,6 +55,7 @@ Account and admin identity routes are connected to real backend APIs. Connector 
 Related real admin APIs in M1.0C:
 
 - `GET /healthz`
+- `GET /readyz`
 - `GET /admin/me`
 - `GET /admin/system/status`
 
@@ -103,6 +104,7 @@ M1.2D adds UI access to the Import Job workflow:
 - Import Job list/detail pages show real API metadata and Runner disabled reason from `GET /admin/system/status`.
 - Artifact display is metadata-only.
 - No publish, RSS, subscription, or media download controls are exposed.
+- `/healthz` is liveness only; `/readyz` is safe readiness only.
 
 ## 5. Route Guard States
 

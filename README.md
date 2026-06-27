@@ -106,5 +106,6 @@ Local/internal Alpha files:
 - `docker-compose.alpha.yml`
 - `Dockerfile.alpha`
 - `docs/ALPHA_DEPLOYMENT.md`
+- `docs/OPERATIONS_ADMIN_ALPHA.md`
 
 The API service starts with `RUNNER_MODE=disabled` by default and does not mount Docker socket access. Start the Runner separately only for trusted-admin fixture execution. Alpha still does not support public deployment, RSS, real duoting, scheduled jobs, interactive/QR jobs, user subscriptions, or real media download.

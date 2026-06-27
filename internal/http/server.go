@@ -72,6 +72,7 @@ func (s *Server) Router() stdhttp.Handler {
 		w.WriteHeader(stdhttp.StatusNoContent)
 	})
 	router.Get("/healthz", s.handleHealthz)
+	router.Get("/readyz", s.handleReadyz)
 
 	router.Route("/auth", func(r chi.Router) {
 		r.Post("/register/request-code", s.handleRegisterRequestCode)
