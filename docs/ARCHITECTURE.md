@@ -82,6 +82,8 @@ D2 packages the current architecture as a private User Beta deployment candidate
 
 D2.1 adds a local-only smoke harness for the deployment candidate. It starts an isolated Compose project, binds the API only to localhost, inserts fixture published content and access grants, verifies private media and RSS revocation behavior, and validates backup plus temporary restore without touching existing development databases or real media.
 
+Q1 adds baseline operations hardening. API request logs are JSON and include only request ID, method, redacted path, status, and duration. Private RSS token paths are redacted before logging. `/metrics` exposes only safe process/dependency gauges and must be restricted by reverse proxy or infrastructure. Cleanup scripts are dry-run by default and avoid published media, active RSS data, active Connector versions, active Sources, and running Jobs.
+
 ### 3.4 Domain Service Layer
 
 Encapsulates business policies:

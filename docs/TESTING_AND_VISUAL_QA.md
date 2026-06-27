@@ -224,6 +224,17 @@ Local User Beta smoke validation covers:
 
 The smoke uses temporary local Compose data only. It creates fixture users, a published Program/Episode, a small text media fixture, an active grant, a private RSS Feed, a token rotation, a grant revocation, and backup/restore verification. It must not print secrets, cookies, RSS tokens, or complete private RSS URLs.
 
+## Q1 security and operations checks
+
+Q1 validation covers:
+
+- HTTP tests for public redacted `/metrics`.
+- HTTP tests for RSS private path redaction before logging.
+- `bash -n` for User Beta preflight and cleanup scripts.
+- Preflight dry-run behavior against `.env.user-beta.example`, which is expected to fail closed on placeholders.
+
+Cleanup scripts are not run with `--apply` in the standard automated validation path.
+
 Frontend:
 
 - Admin Playwright tests cover Source empty state, Source creation from approved version, Secret metadata display, and absence of runtime/download controls.

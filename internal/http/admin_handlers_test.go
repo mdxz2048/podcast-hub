@@ -166,6 +166,45 @@ func TestReadyzReturnsSafeReadyAndNotReady(t *testing.T) {
 	assertNoSensitiveHealthFields(t, rec.Body.String())
 }
 
+func TestMetricsIsPublicAndRedacted(t *testing.T) {
+	server := testServer(t)
+	server.health.DB = fakeDBPinger{}
+	server.health.Redis = fakeRedisPinger{}
+	req := httptest.NewRequest(stdhttp.MethodGet, "/metrics", nil)
+	rec := httptest.NewRecorder()
+	server.Router().ServeHTTP(rec, req)
+	if rec.Code != stdhttp.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	for _, required := range []string{"podcast_hub_api_up 1", `podcast_hub_dependency_ready{dependency="database"} 1`, "podcast_hub_runner_enabled 0"} {
+		if !strings.Contains(body, required) {
+			t.Fatalf("metrics missing %q: %s", required, body)
+		}
+	}
+	assertNoSensitiveHealthFields(t, body)
+}
+
+func TestPrivateRSSPathRedaction(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		{"/rss/private/token-secret.xml", "/rss/private/[redacted].xml"},
+		{"/rss/private/token-secret/episodes/episode-1/media", "/rss/private/[redacted]/episodes/episode-1/media"},
+		{"/programs", "/programs"},
+	}
+	for _, tc := range cases {
+		got := redactPrivateRSSPath(tc.input)
+		if strings.Contains(got, "token-secret") {
+			t.Fatalf("redacted path leaked token: %s", got)
+		}
+		if got != tc.expected {
+			t.Fatalf("expected %q, got %q", tc.expected, got)
+		}
+	}
+}
+
 func assertNoSensitiveHealthFields(t *testing.T, body string) {
 	t.Helper()
 	for _, forbidden := range []string{"DATABASE_URL", "REDIS_URL", "SMTP", "SECRETS_MASTER_KEY", "SESSION_PEPPER", "AUTH_CODE_PEPPER", "password", "token", "/Users/", ".local/", "postgresql://", "redis://"} {

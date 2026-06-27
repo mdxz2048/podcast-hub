@@ -194,3 +194,18 @@ Important deployment variables:
 ## D2.1 local smoke environment
 
 `scripts/smoke-user-beta-local.sh` generates a temporary `.env.user-beta.smoke` under the system temp directory. It uses development mode, mock Turnstile, localhost-only API binding, generated test-only secrets, and temporary Compose volumes. Do not reuse those generated values for private deployment.
+
+## Q1 operations environment
+
+Cleanup scripts use:
+
+- `ENV_FILE`
+- `COMPOSE_FILE`
+- `POSTGRES_SERVICE`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `OLDER_THAN_DAYS`
+- `RUNNER_WORKSPACE_ROOT`
+- `CONNECTOR_PACKAGE_LOCAL_DIR`
+
+All cleanup scripts default to dry-run and require `--apply` before deleting eligible data.

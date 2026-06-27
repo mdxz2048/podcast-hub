@@ -79,6 +79,7 @@ func NewServer(cfg config.Config, authService *auth.Service, turnstile security.
 func (s *Server) Router() stdhttp.Handler {
 	router := chi.NewRouter()
 	router.Use(s.secureRequestIDMiddleware)
+	router.Use(s.requestLogMiddleware)
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
 	router.Use(s.corsMiddleware)
@@ -90,6 +91,7 @@ func (s *Server) Router() stdhttp.Handler {
 	})
 	router.Get("/healthz", s.handleHealthz)
 	router.Get("/readyz", s.handleReadyz)
+	router.Get("/metrics", s.handleMetrics)
 	router.Get("/rss/private/{opaqueToken}.xml", s.handlePrivateRSS)
 	router.Get("/rss/private/{opaqueToken}/episodes/{episodeId}/media", s.handlePrivateRSSMedia)
 	router.Head("/rss/private/{opaqueToken}/episodes/{episodeId}/media", s.handlePrivateRSSMedia)

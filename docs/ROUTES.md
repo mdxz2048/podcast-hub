@@ -62,6 +62,7 @@ Related real admin APIs in M1.0C:
 
 - `GET /healthz`
 - `GET /readyz`
+- `GET /metrics`
 - `GET /admin/me`
 - `GET /admin/system/status`
 
@@ -112,7 +113,7 @@ M1.2D adds UI access to the Import Job workflow:
 - Import Job list/detail pages show real API metadata and Runner disabled reason from `GET /admin/system/status`.
 - Artifact display is metadata-only.
 - No publish, RSS, subscription, or media download controls are exposed.
-- `/healthz` is liveness only; `/readyz` is safe readiness only.
+- `/healthz` is liveness only; `/readyz` is safe readiness only; `/metrics` exposes redacted operational gauges only and must be restricted at the reverse proxy or infrastructure layer.
 
 Additional real admin staging intake APIs in M1.3A:
 
@@ -181,6 +182,8 @@ Only create and rotate responses expose plaintext token URLs. RSS list and admin
 D2 deployment candidate adds no new application routes. It adds reverse proxy routing for frontend, API, and `/rss/private/*` token paths in `deploy/Caddyfile.user-beta.template`.
 
 D2.1 adds no new application routes. The local smoke script exercises existing user catalog, private media, RSS Feed, and enclosure routes through a localhost-only API port.
+
+Q1 adds `GET /metrics` for safe operational gauges. It does not expose user identifiers, emails, tokens, cookies, URLs, storage keys, paths, or connection strings.
 
 ## 5. Route Guard States
 

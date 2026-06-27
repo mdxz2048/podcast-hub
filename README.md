@@ -173,11 +173,16 @@ D2 adds private deployment candidate files:
 - `scripts/restore-postgres.sh`
 - `scripts/rotate-secrets-check.sh`
 - `scripts/smoke-user-beta-local.sh`
+- `scripts/cleanup-staging.sh`
+- `scripts/cleanup-job-workspaces.sh`
+- `scripts/cleanup-connector-packages.sh`
 - `docs/OPERATIONS_USER_BETA.md`
 
 These files do not represent a completed public deployment. They are placeholders and checks for a future private server deployment after operator review.
 
 D2.1 adds a local-only smoke script. It is dry-run by default and requires `--apply` before it starts a temporary Compose project, creates fixture users/content/media, verifies RSS and private media revocation behavior, and runs backup/temporary restore verification.
+
+Q1 adds redacted `/metrics`, JSON request logging with private RSS token path redaction, dry-run cleanup scripts, and stronger User Beta preflight checks.
 
 Run the optional real Docker fixture smoke test explicitly:
 

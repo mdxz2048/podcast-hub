@@ -20,6 +20,7 @@
 - M1.5C: **Completed** (real user RSS management page, admin RSS metadata/revoke page, and RSS token redaction audit call points)
 - D2: **Completed** (private User Beta deployment candidate files, preflight, backup/restore scripts, and operations docs)
 - D2.1: **Implemented in current workspace changes; local apply smoke environment-blocked** (local-only User Beta smoke script with fixture catalog/media/RSS, revocation checks, backup, and temporary restore verification; current Docker pull did not reach app assertions)
+- Q1: **Completed in current workspace changes** (redacted metrics, JSON request logging with RSS token path redaction, dry-run cleanup scripts, and stronger User Beta preflight checks)
 
 ## Clarifications
 

@@ -129,3 +129,19 @@ Logs must not contain:
 - Runner disabled must not fail API readiness.
 
 Restrict operational endpoints at the reverse proxy and infrastructure layer.
+
+## Metrics
+
+`/metrics` exposes only redacted gauges for API liveness, dependency readiness, and Runner enablement. It must be restricted at the reverse proxy or infrastructure layer and must not be treated as a public debugging endpoint.
+
+## Cleanup
+
+Cleanup scripts are dry-run by default:
+
+```bash
+scripts/cleanup-staging.sh --env-file=.env.user-beta
+scripts/cleanup-job-workspaces.sh --env-file=.env.user-beta
+scripts/cleanup-connector-packages.sh --env-file=.env.user-beta
+```
+
+Use `--apply` only after reviewing dry-run output. Cleanup output avoids absolute paths and storage keys. Do not clean published media, active RSS data, active Connector versions, active Sources, or running Jobs.
