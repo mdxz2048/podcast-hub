@@ -2,9 +2,13 @@ package http
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	stdhttp "net/http"
 	"net/url"
 	"strings"
+
+	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/mdxz2048/podcast-hub/internal/auth"
 )
@@ -12,6 +16,25 @@ import (
 type contextKey string
 
 const authUserContextKey contextKey = "auth_user"
+
+const requestIDPrefix = "req_"
+
+func (s *Server) secureRequestIDMiddleware(next stdhttp.Handler) stdhttp.Handler {
+	return stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+		requestID := newSecureRequestID()
+		w.Header().Set(middleware.RequestIDHeader, requestID)
+		ctx := context.WithValue(r.Context(), middleware.RequestIDKey, requestID)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func newSecureRequestID() string {
+	var raw [16]byte
+	if _, err := rand.Read(raw[:]); err != nil {
+		return ""
+	}
+	return requestIDPrefix + hex.EncodeToString(raw[:])
+}
 
 func (s *Server) corsMiddleware(next stdhttp.Handler) stdhttp.Handler {
 	return stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {

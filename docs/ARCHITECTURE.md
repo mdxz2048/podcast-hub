@@ -70,6 +70,8 @@ Owns all platform commands and queries. All UI actions go through the API layer,
 - Publication changes.
 - User access changes.
 
+The API layer assigns every request a server-generated opaque correlation ID before routing. Error responses may return this `request_id` so administrators can correlate a client report with logs, but the value must be random and non-semantic. It must not include hostnames, IP addresses, `.local` names, paths, user names, URLs, tokens, cookies, Secret material, database connection strings, or any caller-supplied `X-Request-Id`.
+
 ### 3.4 Domain Service Layer
 
 Encapsulates business policies:

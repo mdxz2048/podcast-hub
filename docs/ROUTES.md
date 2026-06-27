@@ -64,6 +64,8 @@ Related real admin APIs in M1.0C:
 - `GET /admin/me`
 - `GET /admin/system/status`
 
+All API error responses may include `error.request_id`. This is not a route parameter or authentication credential; it is an opaque server-generated support correlation value and must not be logged or displayed as user identity.
+
 Additional real admin Connector APIs in M1.1A:
 
 - `GET /admin/connectors`

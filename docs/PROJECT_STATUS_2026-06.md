@@ -15,6 +15,7 @@
 - M1.3B: **Completed** (admin review, metadata edit, approve/reject, publish/archive state machine)
 - M1.5A: **Completed in current workspace changes** (private published-media delivery with authorization-aware storage promotion and HTTP range support)
 - M1.5B: **Completed in current workspace changes** (private RSS feeds, feed token rotation/revocation, and token-backed private enclosures)
+- P0 User Beta baseline: **Completed in current workspace changes** (request correlation IDs are now server-generated random values with no hostname, `.local`, path, token, cookie, or caller-supplied content)
 
 ## Clarifications
 
@@ -25,3 +26,4 @@
 - M1.3A Program/Episode records are admin-only staging candidates. They are not published and are not visible to normal users.
 - Private media delivery and private RSS now depend on explicit selected-user Program access grants rather than public catalog exposure.
 - The `/rss` frontend page is currently a mock management surface; the backend RSS APIs and private enclosure APIs are implemented separately.
+- Error responses may include `request_id` for support correlation, but the value is opaque and non-semantic. Clients must not treat it as stable identity or derive environment information from it.

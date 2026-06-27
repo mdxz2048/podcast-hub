@@ -1,7 +1,7 @@
 # Podcast Hub
 
 Podcast Hub is a content ingestion and publishing platform.  
-Current phase includes real account/admin flows, Connector registry, Source/Secret metadata, Import Job lifecycle, fixture-only Runner protocol, trusted-admin Docker Runner boundaries, local/internal Alpha deployment preparation, admin-only staging intake, and administrator review/publish state controls.
+Current phase includes real account/admin flows, Connector registry, Source/Secret metadata, Import Job lifecycle, fixture-only Runner protocol, trusted-admin Docker Runner boundaries, local/internal Alpha deployment preparation, admin-only staging intake, administrator review/publish state controls, private media/RSS backend flows, and privacy-safe request correlation IDs.
 
 ## Local development
 
@@ -119,11 +119,14 @@ Admin and normal users share `/login`; admin role is enforced by backend middlew
 ## Verification commands
 
 ```bash
+find cmd config internal -name '*.go' -print0 | xargs -0 gofmt -w
 CGO_ENABLED=0 GOTOOLCHAIN=local go test ./...
 corepack pnpm run --if-present test
 corepack pnpm build
 git diff --check
 ```
+
+Error responses include a server-generated `request_id` for log correlation. The ID is an opaque random value and must not contain hostnames, local paths, caller-provided IDs, tokens, cookies, or other environment-derived information.
 
 ## Deployable Alpha notes
 

@@ -52,6 +52,8 @@ Production startup must fail when:
 - `SESSION_COOKIE_SECURE != true`
 - any required security pepper missing
 
+Request correlation IDs do not require environment configuration. The API generates opaque random IDs per request and ignores caller-supplied request ID headers so local hostnames, deployment names, tokens, cookies, and paths cannot be reflected through error responses.
+
 ## 5. Local development stack
 
 M1.0 local dependencies:

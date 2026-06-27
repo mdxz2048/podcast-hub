@@ -78,7 +78,7 @@ func NewServer(cfg config.Config, authService *auth.Service, turnstile security.
 
 func (s *Server) Router() stdhttp.Handler {
 	router := chi.NewRouter()
-	router.Use(middleware.RequestID)
+	router.Use(s.secureRequestIDMiddleware)
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
 	router.Use(s.corsMiddleware)
