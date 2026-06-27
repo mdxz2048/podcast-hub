@@ -90,8 +90,16 @@ Example:
   },
   "paths": {
     "output_dir": "/workspace/output",
-    "temp_dir": "/workspace/tmp"
+    "temp_dir": "/workspace/tmp",
+    "secrets_dir": "/work/secrets"
   },
+  "secrets": [
+    {
+      "name": "session_file",
+      "type": "file",
+      "path": "/work/secrets/session_file"
+    }
+  ],
   "limits": {
     "timeout_seconds": 900,
     "max_output_mb": 2048,
@@ -127,6 +135,7 @@ Example:
 - `qr_each_run` must use `trigger_type: manual` and `execution_mode: interactive`.
 - `paths.output_dir` is the only writable output location.
 - Secret values should be passed by opaque reference where possible.
+- M1.2E Runner Secret injection uses controlled file references under `/work/secrets`; Secret values must never appear in `job.json`.
 
 ## 4. JSON Lines Event Stream
 

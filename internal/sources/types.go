@@ -60,3 +60,9 @@ type ConnectorSourceDetail struct {
 	RequiredSecrets []string              `json:"required_secrets"`
 	MissingSecrets  []string              `json:"missing_secrets"`
 }
+
+type RunnerSecret struct {
+	Name  string
+	Type  SecretType
+	Value []byte
+}

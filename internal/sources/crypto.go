@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 )
@@ -39,6 +40,24 @@ func (c *SecretCipher) Encrypt(plaintext []byte) (string, error) {
 	sealed := c.aead.Seal(nil, nonce, plaintext, nil)
 	payload := append(nonce, sealed...)
 	return base64.StdEncoding.EncodeToString(payload), nil
+}
+
+func (c *SecretCipher) Decrypt(payload string) ([]byte, error) {
+	raw, err := base64.StdEncoding.DecodeString(payload)
+	if err != nil {
+		return nil, fmt.Errorf("decode secret payload: %w", err)
+	}
+	nonceSize := c.aead.NonceSize()
+	if len(raw) <= nonceSize {
+		return nil, errors.New("secret payload is invalid")
+	}
+	nonce := raw[:nonceSize]
+	sealed := raw[nonceSize:]
+	plaintext, err := c.aead.Open(nil, nonce, sealed, nil)
+	if err != nil {
+		return nil, fmt.Errorf("decrypt secret payload: %w", err)
+	}
+	return plaintext, nil
 }
 
 func decodeMasterKey(masterKey string) ([]byte, error) {

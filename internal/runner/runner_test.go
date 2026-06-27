@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/mdxz2048/podcast-hub/internal/jobs"
+	"github.com/mdxz2048/podcast-hub/internal/sources"
 )
 
 func TestRunnerFixtureCompletesAndCleansWorkspace(t *testing.T) {
@@ -30,8 +31,8 @@ func TestRunnerFixtureCompletesAndCleansWorkspace(t *testing.T) {
 		if err != nil {
 			t.Fatalf("read input: %v", err)
 		}
-		if strings.Contains(strings.ToLower(string(body)), "secret") || strings.Contains(string(body), "/Users/") {
-			t.Fatalf("job input leaked secret or host path: %s", string(body))
+		if strings.Contains(string(body), "/Users/") || strings.Contains(string(body), ".local/") {
+			t.Fatalf("job input leaked host path: %s", string(body))
 		}
 		writeArtifact(t, outputDir, "episodes/episode-001.json", []byte(`{"title":"Fixture"}`))
 		return ExecutionResult{Stdout: bytes.NewReader([]byte(
@@ -120,6 +121,107 @@ func TestRunnerTimeoutFailsJob(t *testing.T) {
 	}
 }
 
+func TestRunnerInjectsSecretsWithoutLeaking(t *testing.T) {
+	root := t.TempDir()
+	const secretValue = "super-secret-token"
+	jobService := &fakeJobService{job: jobs.ImportJob{
+		ID:                 "job1",
+		ConnectorSourceID:  "source1",
+		ConnectorVersionID: "version1",
+		Status:             jobs.JobStatusQueued,
+		TriggerType:        "manual",
+		AuthMode:           "reusable_session",
+		ExecutionMode:      "unattended",
+		CreatedAt:          time.Now(),
+	}}
+	executor := fixtureExecutor{run: func(inputPath string, outputDir string) ExecutionResult {
+		body, err := os.ReadFile(inputPath)
+		if err != nil {
+			t.Fatalf("read input: %v", err)
+		}
+		if strings.Contains(string(body), secretValue) {
+			t.Fatalf("job input leaked secret value: %s", string(body))
+		}
+		if !strings.Contains(string(body), "/work/secrets/session_file") {
+			t.Fatalf("job input should contain logical secret path, got %s", string(body))
+		}
+		secretBody, err := os.ReadFile(filepath.Join(filepath.Dir(filepath.Dir(inputPath)), "secrets", "session_file"))
+		if err != nil {
+			t.Fatalf("read injected secret: %v", err)
+		}
+		if string(secretBody) != secretValue {
+			t.Fatalf("unexpected secret content")
+		}
+		writeArtifact(t, outputDir, "episodes/episode-001.json", []byte(`{"title":"Fixture"}`))
+		return ExecutionResult{Stdout: bytes.NewReader([]byte(
+			`{"type":"artifact_ready","artifact_type":"episode_metadata","path":"episodes/episode-001.json"}` + "\n" +
+				`{"type":"completed","message":"done"}` + "\n",
+		)), ExitCode: 0}
+	}}
+	r := New(jobService, executor, Config{
+		WorkspaceRoot: root,
+		SecretProvider: fakeSecretProvider{secrets: []sources.RunnerSecret{{
+			Name:  "session_file",
+			Type:  sources.SecretTypeFile,
+			Value: []byte(secretValue),
+		}}},
+	})
+	if err := r.RunOnce(context.Background()); err != nil {
+		t.Fatalf("run once: %v", err)
+	}
+	if jobService.job.Status != jobs.JobStatusCompleted {
+		t.Fatalf("expected completed, got %s", jobService.job.Status)
+	}
+	for _, event := range jobService.events {
+		if strings.Contains(event.MessageRedacted+event.MetadataRedacted, secretValue) {
+			t.Fatalf("event leaked secret: %+v", event)
+		}
+	}
+	for _, artifact := range jobService.artifacts {
+		if strings.Contains(artifact.RelativePath+artifact.ArtifactType+artifact.SHA256, secretValue) {
+			t.Fatalf("artifact leaked secret: %+v", artifact)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(root, "job1", "work", "secrets", "session_file")); !os.IsNotExist(err) {
+		t.Fatalf("expected secret workspace cleanup, stat err=%v", err)
+	}
+}
+
+func TestRunnerSecretPreflightFailuresDoNotExecute(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		code string
+	}{
+		{name: "missing required secret", err: sources.ErrMissingRequiredSecrets, code: "missing_required_secrets"},
+		{name: "revoked secret", err: sources.ErrSecretRevoked, code: "secret_revoked"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			jobService := &fakeJobService{job: jobs.ImportJob{
+				ID:                 "job1",
+				ConnectorSourceID:  "source1",
+				ConnectorVersionID: "version1",
+				Status:             jobs.JobStatusQueued,
+				TriggerType:        "manual",
+				AuthMode:           "reusable_session",
+				ExecutionMode:      "unattended",
+				CreatedAt:          time.Now(),
+			}}
+			r := New(jobService, fixtureExecutor{run: func(string, string) ExecutionResult {
+				t.Fatal("executor should not run when secret preflight fails")
+				return ExecutionResult{}
+			}}, Config{WorkspaceRoot: t.TempDir(), SecretProvider: fakeSecretProvider{err: tt.err}})
+			if err := r.RunOnce(context.Background()); err == nil {
+				t.Fatal("expected secret preflight error")
+			}
+			if jobService.job.Status != jobs.JobStatusFailed || jobService.job.FailureCode != tt.code {
+				t.Fatalf("expected %s failure, got %+v", tt.code, jobService.job)
+			}
+		})
+	}
+}
+
 type fixtureExecutor struct {
 	run func(inputPath string, outputDir string) ExecutionResult
 }
@@ -134,6 +236,15 @@ type fakeJobService struct {
 	cancelOnGet bool
 	events      []jobs.ImportJobEvent
 	artifacts   []jobs.ImportJobArtifact
+}
+
+type fakeSecretProvider struct {
+	secrets []sources.RunnerSecret
+	err     error
+}
+
+func (p fakeSecretProvider) ResolveRunnerSecrets(context.Context, string) ([]sources.RunnerSecret, error) {
+	return p.secrets, p.err
 }
 
 func (s *fakeJobService) GetJob(context.Context, string) (jobs.ImportJob, error) {

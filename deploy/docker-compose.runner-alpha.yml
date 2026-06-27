@@ -1,0 +1,21 @@
+services:
+  runner:
+    build:
+      context: ..
+      dockerfile: Dockerfile.runner-alpha
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://podcast_hub:change_me_alpha_password@postgres:5432/podcast_hub?sslmode=disable}
+      SECRETS_MASTER_KEY: ${SECRETS_MASTER_KEY:-0123456789abcdef0123456789abcdef}
+      RUNNER_MODE: ${RUNNER_MODE:-disabled}
+      RUNNER_PYTHON_BASIC_IMAGE: ${RUNNER_PYTHON_BASIC_IMAGE:-python:3.12-alpine}
+      RUNNER_PYTHON_TELEGRAM_IMAGE: ${RUNNER_PYTHON_TELEGRAM_IMAGE:-python:3.12-alpine}
+      RUNNER_WORKSPACE_ROOT: /workspace
+      RUNNER_FIXTURE_PACKAGE_DIR: /app/internal/runner/testdata
+    user: "${RUNNER_UID:-10001}:${RUNNER_GID:-10001}"
+    volumes:
+      - runner_workspace:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    network_mode: bridge
+
+volumes:
+  runner_workspace:

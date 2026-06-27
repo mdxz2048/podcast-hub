@@ -15,6 +15,12 @@ def main():
     input_path = pathlib.Path(sys.argv[1])
     output_dir = pathlib.Path(sys.argv[2])
     job = json.loads(input_path.read_text())
+    for secret in job.get("secrets", []):
+        secret_path = pathlib.Path(secret["path"].replace("/work", str(output_dir.parent), 1))
+        if not secret_path.exists():
+            emit({"type": "failed", "level": "error", "message": "declared secret file missing"})
+            return 1
+        secret_path.read_bytes()
     rel = pathlib.Path("episodes") / "fixture-episode.json"
     target = output_dir / rel
     target.parent.mkdir(parents=True, exist_ok=True)

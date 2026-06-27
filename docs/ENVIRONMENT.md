@@ -125,6 +125,11 @@ Security reminder:
   - Reserved placeholder for a future runtime profile. M1.2D does not use Telegram.
 - `RUNNER_WORKSPACE_ROOT`
   - Local Runner workspace root. Must remain git-ignored.
+- `RUNNER_INTEGRATION_TEST`
+  - Set to `1` only when intentionally running the real Docker fixture smoke test.
+  - Default test runs do not start Docker.
+- `RUNNER_UID` and `RUNNER_GID`
+  - Optional Runner compose identity override for Docker socket access in private Alpha environments.
 - `.env.alpha.example`
   - Placeholder-only local/internal Alpha environment file.
   - Copy to `.env.alpha` and replace every placeholder locally.

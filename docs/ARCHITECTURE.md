@@ -137,6 +137,17 @@ M1.2D adds the internal Alpha operating surface:
 - Runner startup remains separate from API startup; API containers do not mount the Docker socket.
 - Alpha deployment is local/internal only and does not provide public HTTPS, RSS, user catalog, real external Connectors, or production hosting.
 
+M1.2E adds the Runner integration and Secret boundary:
+
+- Real Docker fixture smoke test is available only with `RUNNER_INTEGRATION_TEST=1`.
+- API service still does not mount or use Docker socket.
+- Separate Runner compose is provided at `deploy/docker-compose.runner-alpha.yml`.
+- Runner may mount Docker socket; Connector containers must not.
+- Runner decrypts Source-bound Secrets only after claiming a Job and writes them only to temporary `/work/secrets` files.
+- `job.json` exposes only Secret logical file references, not values.
+- Secret files are deleted with the job workspace.
+- No Program, Episode, Review, RSS, media download, scheduled, interactive, QR, Telegram, or duoting capability is introduced.
+
 Required properties:
 
 - Non-root user.

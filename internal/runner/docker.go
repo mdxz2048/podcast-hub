@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -45,6 +46,7 @@ type DockerTrustedAdminConfig struct {
 	CPUQuota             int64
 	MemoryBytes          int64
 	PidsLimit            int64
+	User                 string
 }
 
 type DockerClient interface {
@@ -100,13 +102,23 @@ func BuildDockerTrustedAdminSpec(inputPath string, outputDir string, cfg DockerT
 	if pids <= 0 {
 		pids = 128
 	}
+	user := strings.TrimSpace(cfg.User)
+	if user == "" {
+		uid := os.Getuid()
+		gid := os.Getgid()
+		if uid == 0 {
+			uid = 65532
+			gid = 65532
+		}
+		user = strconv.Itoa(uid) + ":" + strconv.Itoa(gid)
+	}
 	return DockerRunSpec{
 		Image:          cfg.Image,
 		Command:        []string{"python", "/connector/fixture_connector.py", "/work/input/" + filepath.Base(inputPath), "/work/output"},
 		ContainerName:  "podcast-hub-job-" + safeContainerSuffix(workRoot),
 		Privileged:     false,
 		NetworkMode:    "none",
-		User:           "65532:65532",
+		User:           user,
 		ReadOnlyRootFS: true,
 		Mounts: []DockerMount{
 			{Source: workRoot, Target: "/work", ReadOnly: false},

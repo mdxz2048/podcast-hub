@@ -10,6 +10,7 @@
 - M1.2B: **Completed** (fixture-only Runner protocol, JSON Lines validation, Artifact metadata validation)
 - M1.2C: **Completed** (trusted-admin Docker Runner mode for fixture execution only)
 - M1.2D: **Completed** (admin Import Job console, disabled Runner visibility, and local/internal Alpha deployment preparation)
+- M1.2E: **Completed** (Docker fixture integration smoke, Runner Secret injection boundary, separate Runner compose)
 
 ## Clarifications
 

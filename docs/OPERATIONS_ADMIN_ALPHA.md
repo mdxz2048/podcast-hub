@@ -83,9 +83,17 @@ The API service must not mount the Docker socket and must not execute Connector 
 
 The Runner is a separate trusted-admin service. Only the Runner may have Docker execution capability. Connector containers still must not receive the Docker socket.
 
+Runner compose:
+
+```bash
+RUNNER_MODE=docker_trusted_admin docker compose -f deploy/docker-compose.runner-alpha.yml up runner
+```
+
+The Runner service exposes no public ports. It is trusted-admin Alpha only.
+
 ## Secret Boundary
 
-Secrets are written through admin APIs as encrypted records and bound by reference. Admin APIs must not return plaintext Secret values. M1.2D does not inject Secret values into Runner execution.
+Secrets are written through admin APIs as encrypted records and bound by reference. Admin APIs must not return plaintext Secret values. M1.2E allows only the separate Runner to decrypt required Source-bound Secrets after it claims a Job. Secret values are written only to temporary `/work/secrets` files and removed with workspace cleanup.
 
 ## Logs
 

@@ -2,7 +2,7 @@
 
 ## Current Mode
 
-M1.2C supports:
+M1.2E supports:
 
 - `RUNNER_MODE=disabled`
 - `RUNNER_MODE=docker_trusted_admin`
@@ -44,6 +44,20 @@ Connector container:
 - does not receive Docker socket
 - does not receive host root mount
 - does not receive database, Redis, or production Secret access
+
+## Secret Injection
+
+Runner is the only component allowed to decrypt Source-bound Secrets at execution time.
+
+Secret rules:
+
+- API service stores encrypted Secret records and exposes metadata only.
+- Runner revalidates Source state, required Secret bindings, and revoked state after claiming a Job.
+- Runner decrypts only the Secrets required by the Source.
+- Secret files are written to `/work/secrets` in the temporary job workspace.
+- `job.json` contains only Secret logical name, type, and `/work/secrets/...` path.
+- Secret values must not appear in Docker command line, Docker environment, Job Events, Artifact metadata, logs, or API responses.
+- Workspace cleanup removes Secret files after success, failure, cancellation, and timeout.
 
 ## Docker Controls
 

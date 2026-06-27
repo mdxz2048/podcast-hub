@@ -13,6 +13,7 @@ import (
 
 	"github.com/mdxz2048/podcast-hub/internal/jobs"
 	"github.com/mdxz2048/podcast-hub/internal/runner"
+	"github.com/mdxz2048/podcast-hub/internal/sources"
 	"github.com/mdxz2048/podcast-hub/internal/store/postgres"
 )
 
@@ -42,12 +43,19 @@ func main() {
 	}
 	defer dbPool.Close()
 
+	connectorStore := postgres.NewConnectorStore(dbPool)
+	secretCipher, err := sources.NewSecretCipher(os.Getenv("SECRETS_MASTER_KEY"))
+	if err != nil {
+		logger.Error("failed to configure runner secret cipher", "error", err.Error())
+		os.Exit(1)
+	}
+	sourceService := sources.NewService(postgres.NewSourceStore(dbPool), connectorStore, secretCipher)
 	jobService := jobs.NewService(postgres.NewJobStore(dbPool), nil)
 	executor := runner.DockerTrustedAdminExecutor{Config: runner.DockerTrustedAdminConfig{
 		Image:                image,
 		ConnectorPackagePath: getEnv("RUNNER_FIXTURE_PACKAGE_DIR", "internal/runner/testdata"),
 	}}
-	r := runner.New(jobService, executor, runner.Config{WorkspaceRoot: os.Getenv("RUNNER_WORKSPACE_ROOT")})
+	r := runner.New(jobService, executor, runner.Config{WorkspaceRoot: os.Getenv("RUNNER_WORKSPACE_ROOT"), SecretProvider: sourceService})
 	if err := r.RunOnce(ctx); err != nil {
 		if errors.Is(err, runner.ErrNoQueuedJob) {
 			logger.Info("no queued import job")

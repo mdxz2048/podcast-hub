@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/mdxz2048/podcast-hub/internal/jobs"
+	"github.com/mdxz2048/podcast-hub/internal/sources"
 )
 
 var ErrNoQueuedJob = errors.New("no queued import job")
@@ -28,6 +29,10 @@ type Executor interface {
 	Execute(ctx context.Context, inputPath string, outputDir string) ExecutionResult
 }
 
+type SecretProvider interface {
+	ResolveRunnerSecrets(ctx context.Context, sourceID string) ([]sources.RunnerSecret, error)
+}
+
 type ExecutionResult struct {
 	Stdout   io.Reader
 	ExitCode int
@@ -40,6 +45,7 @@ type Config struct {
 	ArtifactLimits           ArtifactLimits
 	ExecutionTimeout         time.Duration
 	CancellationPollInterval time.Duration
+	SecretProvider           SecretProvider
 }
 
 type Runner struct {
@@ -72,7 +78,12 @@ func (r *Runner) RunOnce(ctx context.Context) error {
 	if !found {
 		return ErrNoQueuedJob
 	}
-	workspace, inputPath, outputDir, err := r.prepareWorkspace(job)
+	secrets, err := r.resolveSecrets(ctx, job)
+	if err != nil {
+		_, _ = r.jobs.TransitionJob(ctx, job.ID, jobs.JobStatusFailed, failureCode(err), redact(err.Error()))
+		return err
+	}
+	workspace, inputPath, outputDir, err := r.prepareWorkspace(job, secrets)
 	if err != nil {
 		_, _ = r.jobs.TransitionJob(ctx, job.ID, jobs.JobStatusFailed, "workspace_prepare_failed", redact(err.Error()))
 		return err
@@ -175,7 +186,18 @@ func wasCancelled(cancelled <-chan struct{}) bool {
 	}
 }
 
-func (r *Runner) prepareWorkspace(job jobs.ImportJob) (string, string, string, error) {
+func (r *Runner) resolveSecrets(ctx context.Context, job jobs.ImportJob) ([]sources.RunnerSecret, error) {
+	if r.config.SecretProvider == nil {
+		return nil, nil
+	}
+	secrets, err := r.config.SecretProvider.ResolveRunnerSecrets(ctx, job.ConnectorSourceID)
+	if err != nil {
+		return nil, fmt.Errorf("resolve runner secrets: %w", err)
+	}
+	return secrets, nil
+}
+
+func (r *Runner) prepareWorkspace(job jobs.ImportJob, secrets []sources.RunnerSecret) (string, string, string, error) {
 	root := r.config.WorkspaceRoot
 	if root == "" {
 		root = filepath.Join(".local", "runner-workspaces")
@@ -183,11 +205,33 @@ func (r *Runner) prepareWorkspace(job jobs.ImportJob) (string, string, string, e
 	workspace := filepath.Join(root, job.ID)
 	inputDir := filepath.Join(workspace, "work", "input")
 	outputDir := filepath.Join(workspace, "work", "output")
+	secretsDir := filepath.Join(workspace, "work", "secrets")
 	if err := os.MkdirAll(inputDir, 0o700); err != nil {
 		return "", "", "", fmt.Errorf("create input directory: %w", err)
 	}
 	if err := os.MkdirAll(outputDir, 0o700); err != nil {
 		return "", "", "", fmt.Errorf("create output directory: %w", err)
+	}
+	secretRefs := make([]map[string]string, 0, len(secrets))
+	if len(secrets) > 0 {
+		if err := os.MkdirAll(secretsDir, 0o700); err != nil {
+			return "", "", "", fmt.Errorf("create secrets directory: %w", err)
+		}
+		for _, secret := range secrets {
+			name, err := cleanSecretName(secret.Name)
+			if err != nil {
+				return "", "", "", err
+			}
+			secretPath := filepath.Join(secretsDir, name)
+			if err := os.WriteFile(secretPath, secret.Value, 0o400); err != nil {
+				return "", "", "", fmt.Errorf("write runner secret: %w", err)
+			}
+			secretRefs = append(secretRefs, map[string]string{
+				"name": name,
+				"type": string(secret.Type),
+				"path": "/work/secrets/" + name,
+			})
+		}
 	}
 	input := map[string]any{
 		"schema_version": "1.0",
@@ -206,9 +250,11 @@ func (r *Runner) prepareWorkspace(job jobs.ImportJob) (string, string, string, e
 			"version_id": job.ConnectorVersionID,
 		},
 		"paths": map[string]any{
-			"input_file": "/work/input/job.json",
-			"output_dir": "/work/output",
+			"input_file":  "/work/input/job.json",
+			"output_dir":  "/work/output",
+			"secrets_dir": "/work/secrets",
 		},
+		"secrets": secretRefs,
 	}
 	body, err := json.MarshalIndent(input, "", "  ")
 	if err != nil {
@@ -219,6 +265,19 @@ func (r *Runner) prepareWorkspace(job jobs.ImportJob) (string, string, string, e
 		return "", "", "", fmt.Errorf("write job input: %w", err)
 	}
 	return workspace, inputPath, outputDir, nil
+}
+
+func cleanSecretName(name string) (string, error) {
+	if name == "" || filepath.Base(name) != name || name == "." || name == ".." {
+		return "", errors.New("runner secret name is invalid")
+	}
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-' || r == '.' {
+			continue
+		}
+		return "", errors.New("runner secret name is invalid")
+	}
+	return name, nil
 }
 
 func failureCode(err error) string {
@@ -249,6 +308,10 @@ func failureCode(err error) string {
 		return "artifact_duplicate"
 	case errors.Is(err, ErrArtifactUndeclared):
 		return "artifact_undeclared"
+	case errors.Is(err, sources.ErrMissingRequiredSecrets):
+		return "missing_required_secrets"
+	case errors.Is(err, sources.ErrSecretRevoked):
+		return "secret_revoked"
 	default:
 		return "runner_failed"
 	}

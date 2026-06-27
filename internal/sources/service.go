@@ -205,6 +205,32 @@ func (s *Service) ValidateRunnableSource(ctx context.Context, sourceID string) (
 	return detail, nil
 }
 
+func (s *Service) ResolveRunnerSecrets(ctx context.Context, sourceID string) ([]RunnerSecret, error) {
+	detail, err := s.ValidateRunnableSource(ctx, sourceID)
+	if err != nil {
+		return nil, err
+	}
+	secrets := make([]RunnerSecret, 0, len(detail.SecretBindings))
+	for _, binding := range detail.SecretBindings {
+		secret, found, err := s.store.GetSecret(ctx, binding.SecretRecordID)
+		if err != nil {
+			return nil, fmt.Errorf("get runner secret: %w", err)
+		}
+		if !found {
+			return nil, ErrSecretNotFound
+		}
+		if secret.RevokedAt != nil {
+			return nil, ErrSecretRevoked
+		}
+		plaintext, err := s.cipher.Decrypt(secret.EncryptedPayload)
+		if err != nil {
+			return nil, fmt.Errorf("decrypt runner secret: %w", err)
+		}
+		secrets = append(secrets, RunnerSecret{Name: binding.SecretName, Type: secret.SecretType, Value: plaintext})
+	}
+	return secrets, nil
+}
+
 func (s *Service) ListSecrets(ctx context.Context) ([]SecretRecord, error) {
 	return s.store.ListSecrets(ctx)
 }

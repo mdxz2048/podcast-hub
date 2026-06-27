@@ -109,3 +109,9 @@ Local/internal Alpha files:
 - `docs/OPERATIONS_ADMIN_ALPHA.md`
 
 The API service starts with `RUNNER_MODE=disabled` by default and does not mount Docker socket access. Start the Runner separately only for trusted-admin fixture execution. Alpha still does not support public deployment, RSS, real duoting, scheduled jobs, interactive/QR jobs, user subscriptions, or real media download.
+
+Run the optional real Docker fixture smoke test explicitly:
+
+```bash
+RUNNER_INTEGRATION_TEST=1 CGO_ENABLED=0 GOTOOLCHAIN=local go test ./... -run Integration
+```
