@@ -35,20 +35,20 @@ services:
   api-volume-init:
     image: alpine:3.20
     user: "0:0"
-    read_only: true
-    command: ["sh", "-c", "mkdir -p /data/connector-packages /data/import-artifacts /data/staging /data/private-media /data/tmp && chown -R 10001:10001 /data"]
+    command: ["sh", "-c", "mkdir -p /data/connector-packages /data/import-artifacts /data/staging /data/private-media /data/tmp && chmod 0770 /data/connector-packages /data/import-artifacts /data/staging /data/private-media /data/tmp && chown 10001:10001 /data/connector-packages /data/import-artifacts /data/staging /data/private-media /data/tmp"]
     volumes:
       - user_beta_connector_packages:/data/connector-packages
       - user_beta_import_artifacts:/data/import-artifacts
       - user_beta_staging:/data/staging
       - user_beta_private_media:/data/private-media
       - user_beta_tmp:/data/tmp
+    network_mode: none
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    networks:
-      - user_beta_private
+    cap_add:
+      - CHOWN
 
   api:
     build:

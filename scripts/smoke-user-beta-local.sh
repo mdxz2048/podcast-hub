@@ -84,6 +84,10 @@ random_hex() {
   openssl rand -hex "$1"
 }
 
+random_base64() {
+  openssl rand -base64 "$1" | tr -d '\n'
+}
+
 hash_with_pepper() {
   local raw="$1"
   local pepper="$2"
@@ -135,7 +139,7 @@ expect_not_contains() {
 
 SESSION_PEPPER="smoke_session_$(random_hex 16)"
 AUTH_CODE_PEPPER="smoke_auth_$(random_hex 16)"
-SECRETS_MASTER_KEY="$(random_hex 32)"
+SECRETS_MASTER_KEY="$(random_base64 32)"
 POSTGRES_PASSWORD="smoke_db_$(random_hex 12)"
 CSRF_TOKEN="smoke_csrf_$(random_hex 12)"
 USER_SESSION_TOKEN="smoke_user_$(random_hex 24)"
@@ -218,7 +222,7 @@ MEDIA_TEXT="Podcast Hub user beta smoke media fixture."
 MEDIA_SIZE="$(printf '%s' "$MEDIA_TEXT" | wc -c | awk '{print $1}')"
 MEDIA_SHA="$(printf '%s' "$MEDIA_TEXT" | shasum -a 256 | awk '{print $1}')"
 
-"${COMPOSE[@]}" exec -T -u 0 api sh -c 'mkdir -p /data/private-media/smoke && cat > /data/private-media/smoke/episode.txt && chown -R 10001:10001 /data/private-media' <<<"$MEDIA_TEXT"
+"${COMPOSE[@]}" exec -T api sh -c 'mkdir -p /data/private-media/smoke && cat > /data/private-media/smoke/episode.txt' <<<"$MEDIA_TEXT"
 
 log "loading temporary users and fixture content"
 "${COMPOSE[@]}" exec -T postgres psql -q -v ON_ERROR_STOP=1 -U podcast_hub -d podcast_hub <<SQL

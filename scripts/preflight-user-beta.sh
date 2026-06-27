@@ -82,7 +82,13 @@ if command -v docker >/dev/null 2>&1; then
   runner_tmp="$(mktemp "${TMPDIR:-/tmp}/podcast-hub-runner-compose.XXXXXX")"
   if docker compose -f deploy/compose.user-beta.yml config >"$compose_tmp"; then
     check "compose user beta config" "1"
+    check "api-volume-init rootfs writable for one-shot init" "$(! awk '/^  api-volume-init:/{in_service=1; next} /^  [a-zA-Z0-9_-]+:/{in_service=0} in_service && /read_only: true/{found=1} END{exit found ? 0 : 1}' "$compose_tmp" && echo 1 || echo 0)"
+    check "api-volume-init network disabled" "$(awk '/^  api-volume-init:/{in_service=1; next} /^  [a-zA-Z0-9_-]+:/{in_service=0} in_service && /network_mode: none/{found=1} END{exit found ? 0 : 1}' "$compose_tmp" && echo 1 || echo 0)"
+    check "api-volume-init exposes no ports" "$(! awk '/^  api-volume-init:/{in_service=1; next} /^  [a-zA-Z0-9_-]+:/{in_service=0} in_service && /^[[:space:]]+ports:/{found=1} END{exit found ? 0 : 1}' "$compose_tmp" && echo 1 || echo 0)"
+    check "api-volume-init excludes Docker socket" "$(! awk '/^  api-volume-init:/{in_service=1; next} /^  [a-zA-Z0-9_-]+:/{in_service=0} in_service && index($0, "/var/run/docker.sock"){found=1} END{exit found ? 0 : 1}' "$compose_tmp" && echo 1 || echo 0)"
+    check "api-volume-init uses controlled volume mounts" "$(awk '/^  api-volume-init:/{in_service=1; next} /^  [a-zA-Z0-9_-]+:/{in_service=0} in_service && index($0, "target: /data/connector-packages"){targets["connector-packages"]=1} in_service && index($0, "target: /data/import-artifacts"){targets["import-artifacts"]=1} in_service && index($0, "target: /data/staging"){targets["staging"]=1} in_service && index($0, "target: /data/private-media"){targets["private-media"]=1} in_service && index($0, "target: /data/tmp"){targets["tmp"]=1} in_service && /type: bind/{bind=1} END{exit (length(targets)==5 && !bind) ? 0 : 1}' "$compose_tmp" && echo 1 || echo 0)"
     check "API container non-root" "$(grep -q 'user: 10001:10001' "$compose_tmp" && echo 1 || echo 0)"
+    check "API container remains read-only" "$(awk '/^  api:/{in_service=1; next} /^  [a-zA-Z0-9_-]+:/{in_service=0} in_service && /read_only: true/{found=1} END{exit found ? 0 : 1}' "$compose_tmp" && echo 1 || echo 0)"
     check "API compose excludes Docker socket" "$(! grep -q '/var/run/docker.sock' "$compose_tmp" && echo 1 || echo 0)"
     check "Private media not mounted into frontend" "$(! awk '/^  frontend:/{in_frontend=1; next} /^  [a-zA-Z0-9_-]+:/{in_frontend=0} in_frontend && /private-media|staging|connector-packages|import-artifacts/{found=1} END{exit found ? 0 : 1}' "$compose_tmp" && echo 1 || echo 0)"
   else
