@@ -235,6 +235,10 @@ Q1 validation covers:
 
 Cleanup scripts are not run with `--apply` in the standard automated validation path.
 
+## M1.4A documentation checks
+
+M1.4A is documentation-only. Validation confirms that future external Connector pilot steps keep duoting-specific code, secrets, sessions, cookies, tokens, API hashes, media, logs, databases, and caches outside the Podcast Hub main repository.
+
 Frontend:
 
 - Admin Playwright tests cover Source empty state, Source creation from approved version, Secret metadata display, and absence of runtime/download controls.

@@ -209,3 +209,7 @@ Cleanup scripts use:
 - `CONNECTOR_PACKAGE_LOCAL_DIR`
 
 All cleanup scripts default to dry-run and require `--apply` before deleting eligible data.
+
+## M1.4A external Connector environment
+
+M1.4A adds no Podcast Hub runtime environment variables. Future source-specific work must use an external workbench outside this repository. Do not place source credentials, cookies, sessions, tokens, API hashes, media, logs, databases, caches, or private pilot files in this repository.

@@ -185,6 +185,8 @@ D2.1 adds no new application routes. The local smoke script exercises existing u
 
 Q1 adds `GET /metrics` for safe operational gauges. It does not expose user identifiers, emails, tokens, cookies, URLs, storage keys, paths, or connection strings.
 
+M1.4A adds no application routes. It adds only external Connector pilot documentation.
+
 ## 5. Route Guard States
 
 Route guard behavior in M1.0C:

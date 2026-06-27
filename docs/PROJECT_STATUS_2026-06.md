@@ -19,14 +19,16 @@
 - M1.3C: **Completed** (real authorized user catalog APIs, personal collections, and admin Program access-grant UI/API integration)
 - M1.5C: **Completed** (real user RSS management page, admin RSS metadata/revoke page, and RSS token redaction audit call points)
 - D2: **Completed** (private User Beta deployment candidate files, preflight, backup/restore scripts, and operations docs)
-- D2.1: **Implemented in current workspace changes; local apply smoke environment-blocked** (local-only User Beta smoke script with fixture catalog/media/RSS, revocation checks, backup, and temporary restore verification; current Docker pull did not reach app assertions)
-- Q1: **Completed in current workspace changes** (redacted metrics, JSON request logging with RSS token path redaction, dry-run cleanup scripts, and stronger User Beta preflight checks)
+- D2.1: **Implemented; local apply smoke environment-blocked** (local-only User Beta smoke script with fixture catalog/media/RSS, revocation checks, backup, and temporary restore verification; current Docker pull did not reach app assertions)
+- Q1: **Completed** (redacted metrics, JSON request logging with RSS token path redaction, dry-run cleanup scripts, and stronger User Beta preflight checks)
+- M1.4A: **Completed in current workspace changes** (external Connector onboarding, real pilot checklist, and Connector security review documentation only; no real duoting access or source-specific code)
 
 ## Clarifications
 
 - Duoting-specific connector code and planning materials are **not** part of the Podcast Hub main repository capability baseline.
 - Podcast Hub platform capability is connector-agnostic: connectors are uploaded as versioned external packages and validated by platform policy.
 - “Repository-internal duoting first-party connector” is **not** counted as a completed project capability.
+- Future duoting work belongs in an external workbench such as `/Users/lvzhipeng/Code/podcast-connectors-workbench/duoting/` and must exclude secrets, sessions, tokens, cookies, media, logs, databases, and caches.
 - Real external Connector execution, scheduled jobs, interactive/QR jobs, real duoting, untrusted third-party Connector isolation, and real public production deployment are **not** implemented yet.
 - M1.3A Program/Episode records are admin-only staging candidates. They are not published and are not visible to normal users.
 - Private media delivery and private RSS now depend on explicit selected-user Program access grants rather than public catalog exposure.

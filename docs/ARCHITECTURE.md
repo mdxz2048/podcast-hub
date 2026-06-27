@@ -84,6 +84,8 @@ D2.1 adds a local-only smoke harness for the deployment candidate. It starts an 
 
 Q1 adds baseline operations hardening. API request logs are JSON and include only request ID, method, redacted path, status, and duration. Private RSS token paths are redacted before logging. `/metrics` exposes only safe process/dependency gauges and must be restricted by reverse proxy or infrastructure. Cleanup scripts are dry-run by default and avoid published media, active RSS data, active Connector versions, active Sources, and running Jobs.
 
+M1.4A documents the external Connector pilot boundary. Podcast Hub remains the platform for Connector upload, validation, Source configuration, Job orchestration, staging, review, publication, authorization, private media, and RSS. Source-specific adaptation, including any future duoting work, happens outside this repository in an external workbench and enters Podcast Hub only as an uploaded Connector ZIP after security review.
+
 ### 3.4 Domain Service Layer
 
 Encapsulates business policies:

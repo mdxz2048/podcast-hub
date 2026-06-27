@@ -184,6 +184,16 @@ D2.1 adds a local-only smoke script. It is dry-run by default and requires `--ap
 
 Q1 adds redacted `/metrics`, JSON request logging with private RSS token path redaction, dry-run cleanup scripts, and stronger User Beta preflight checks.
 
+## External Connector pilot readiness
+
+M1.4A adds documentation for future external Connector onboarding only:
+
+- `docs/EXTERNAL_CONNECTOR_ONBOARDING.md`
+- `docs/REAL_CONNECTOR_PILOT_CHECKLIST.md`
+- `docs/CONNECTOR_SECURITY_REVIEW.md`
+
+The Podcast Hub main repository remains connector-agnostic. duoting-specific adapter work belongs in an external workbench such as `/Users/lvzhipeng/Code/podcast-connectors-workbench/duoting/` and may enter Podcast Hub only later as an uploaded, reviewed Connector ZIP.
+
 Run the optional real Docker fixture smoke test explicitly:
 
 ```bash
