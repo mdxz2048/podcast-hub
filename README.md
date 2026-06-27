@@ -160,6 +160,22 @@ Local/internal Alpha files:
 
 The API service starts with `RUNNER_MODE=disabled` by default and does not mount Docker socket access. Start the Runner separately only for trusted-admin fixture execution. Alpha still does not support public deployment, RSS, real duoting, scheduled jobs, interactive/QR jobs, user subscriptions, or real media download. M1.3B can mark content published in admin state, but normal users cannot see it until M1.3C access grants and catalog APIs are enabled.
 
+## User Beta deployment candidate
+
+D2 adds private deployment candidate files:
+
+- `.env.user-beta.example`
+- `deploy/compose.user-beta.yml`
+- `deploy/runner-compose.user-beta.yml`
+- `deploy/Caddyfile.user-beta.template`
+- `scripts/preflight-user-beta.sh`
+- `scripts/backup-postgres.sh`
+- `scripts/restore-postgres.sh`
+- `scripts/rotate-secrets-check.sh`
+- `docs/OPERATIONS_USER_BETA.md`
+
+These files do not represent a completed public deployment. They are placeholders and checks for a future private server deployment after operator review.
+
 Run the optional real Docker fixture smoke test explicitly:
 
 ```bash

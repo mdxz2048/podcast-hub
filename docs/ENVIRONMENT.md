@@ -167,3 +167,26 @@ M1.3C adds no new required environment variables. User catalog and collection AP
 ## M1.5C environment additions
 
 M1.5C adds no new required environment variables. Private RSS management uses the existing `SESSION_PEPPER`-backed session cookies, CSRF cookie/header, `rss_feeds.token_hash`, and the RSS token pepper already configured for the publication service.
+
+## D2 User Beta environment additions
+
+`.env.user-beta.example` documents private User Beta placeholders. Real values must be supplied outside Git.
+
+Important deployment variables:
+
+- `APP_ENV=production`
+- `PUBLIC_BASE_URL`
+- `FRONTEND_ORIGIN`
+- `DATABASE_URL`
+- `REDIS_URL`
+- `SESSION_COOKIE_SECURE=true`
+- `TURNSTILE_MODE=cloudflare`
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`
+- `SECRETS_MASTER_KEY`
+- `CONNECTOR_PACKAGE_LOCAL_DIR`
+- `IMPORT_ARTIFACT_STORE_DIR`
+- `STAGING_STORE_DIR`
+- `MEDIA_STORE_DIR`
+- `RUNNER_MODE=disabled` by default
+- `RUNNER_TRUSTED_ADMIN_ENABLED`
+- `BACKUP_DIR`

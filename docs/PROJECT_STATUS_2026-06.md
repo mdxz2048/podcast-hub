@@ -18,13 +18,14 @@
 - P0 User Beta baseline: **Completed in current workspace changes** (request correlation IDs are now server-generated random values with no hostname, `.local`, path, token, cookie, or caller-supplied content)
 - M1.3C: **Completed in current workspace changes** (real authorized user catalog APIs, personal collections, and admin Program access-grant UI/API integration)
 - M1.5C: **Completed in current workspace changes** (real user RSS management page, admin RSS metadata/revoke page, and RSS token redaction audit call points)
+- D2: **Completed in current workspace changes** (private User Beta deployment candidate files, preflight, backup/restore scripts, and operations docs)
 
 ## Clarifications
 
 - Duoting-specific connector code and planning materials are **not** part of the Podcast Hub main repository capability baseline.
 - Podcast Hub platform capability is connector-agnostic: connectors are uploaded as versioned external packages and validated by platform policy.
 - “Repository-internal duoting first-party connector” is **not** counted as a completed project capability.
-- Real external Connector execution, scheduled jobs, interactive/QR jobs, real duoting, untrusted third-party Connector isolation, and production deployment are **not** implemented yet.
+- Real external Connector execution, scheduled jobs, interactive/QR jobs, real duoting, untrusted third-party Connector isolation, and real public production deployment are **not** implemented yet.
 - M1.3A Program/Episode records are admin-only staging candidates. They are not published and are not visible to normal users.
 - Private media delivery and private RSS now depend on explicit selected-user Program access grants rather than public catalog exposure.
 - The `/rss` frontend page now uses real RSS API contracts and stores plaintext token URLs only in transient React state after create or rotate.

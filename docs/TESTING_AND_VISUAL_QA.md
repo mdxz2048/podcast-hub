@@ -204,6 +204,16 @@ Frontend:
 - User RSS tests verify one-time token URL display, no token re-display after close, rotate, revoke, and no local/session storage persistence.
 - Admin RSS tests verify metadata-only list and revoke without plaintext token access.
 
+## D2 deployment candidate checks
+
+Static deployment validation covers:
+
+- `docker compose -f deploy/compose.user-beta.yml config`
+- `docker compose -f deploy/runner-compose.user-beta.yml config`
+- `bash -n` for User Beta preflight, backup, restore, and secret rotation scripts.
+
+Real public deployment, real restore against private data, real external Connector execution, and real media download are not part of D2.
+
 Frontend:
 
 - Admin Playwright tests cover Source empty state, Source creation from approved version, Secret metadata display, and absence of runtime/download controls.

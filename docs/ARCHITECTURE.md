@@ -78,6 +78,8 @@ User catalog and collection APIs are read-model endpoints over the publication b
 
 M1.5C connects user and admin RSS management pages to the publication API. Plaintext RSS tokens exist only in create or rotate responses and transient UI state. List APIs and admin APIs return token prefixes only. RSS XML and enclosure audit metadata records redacted token values rather than full tokens or full private URLs.
 
+D2 packages the current architecture as a private User Beta deployment candidate. The API, frontend, PostgreSQL, Redis, reverse proxy, and Runner are separated by compose files. API containers do not mount the Docker socket. Runner is separate and defaults to disabled. Private media, staging, Import artifacts, Connector packages, and Secret-related storage are isolated from the static frontend.
+
 ### 3.4 Domain Service Layer
 
 Encapsulates business policies:

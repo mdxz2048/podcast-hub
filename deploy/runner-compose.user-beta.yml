@@ -1,0 +1,37 @@
+services:
+  runner:
+    build:
+      context: ..
+      dockerfile: Dockerfile.runner-alpha
+    user: "${RUNNER_UID:-10001}:${RUNNER_GID:-10001}"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://podcast_hub:replace_with_database_password@postgres:5432/podcast_hub?sslmode=disable}
+      SECRETS_MASTER_KEY: ${SECRETS_MASTER_KEY:-replace_with_32_byte_or_base64_key}
+      RUNNER_MODE: ${RUNNER_MODE:-disabled}
+      RUNNER_TRUSTED_ADMIN_ENABLED: ${RUNNER_TRUSTED_ADMIN_ENABLED:-false}
+      RUNNER_PYTHON_BASIC_IMAGE: ${RUNNER_PYTHON_BASIC_IMAGE:-python:3.12-alpine}
+      RUNNER_PYTHON_TELEGRAM_IMAGE: ${RUNNER_PYTHON_TELEGRAM_IMAGE:-python:3.12-alpine}
+      RUNNER_WORKSPACE_ROOT: /workspace
+      IMPORT_ARTIFACT_STORE_DIR: /artifacts
+    volumes:
+      - user_beta_runner_workspace:/workspace
+      - user_beta_import_artifacts:/artifacts
+      - /var/run/docker.sock:/var/run/docker.sock
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - user_beta_private
+
+volumes:
+  user_beta_runner_workspace:
+    name: podcast_hub_user_beta_runner_workspace
+  user_beta_import_artifacts:
+    external: true
+    name: podcast_hub_user_beta_import_artifacts
+
+networks:
+  user_beta_private:
+    external: true
+    name: podcast_hub_user_beta_private

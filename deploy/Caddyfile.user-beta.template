@@ -1,0 +1,39 @@
+{
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>uri query {
+					replace /rss/private/[^/?]+ /rss/private/[redacted]
+				}
+			}
+		}
+	}
+}
+
+:80 {
+	encode zstd gzip
+
+	header {
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+	}
+
+	@rss path /rss/private/*
+	handle @rss {
+		header Referrer-Policy "no-referrer"
+		header X-Robots-Tag "noindex, nofollow, noarchive"
+		reverse_proxy api:8080
+	}
+
+	@api path /auth/* /admin/* /programs* /episodes/* /media/* /me/*
+	handle @api {
+		reverse_proxy api:8080
+	}
+
+	handle {
+		reverse_proxy frontend:80
+	}
+}

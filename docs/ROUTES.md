@@ -178,6 +178,8 @@ M1.5C RSS APIs are connected to frontend routes:
 
 Only create and rotate responses expose plaintext token URLs. RSS list and admin list responses expose token prefixes only.
 
+D2 deployment candidate adds no new application routes. It adds reverse proxy routing for frontend, API, and `/rss/private/*` token paths in `deploy/Caddyfile.user-beta.template`.
+
 ## 5. Route Guard States
 
 Route guard behavior in M1.0C:
