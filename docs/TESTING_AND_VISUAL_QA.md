@@ -138,6 +138,24 @@ Frontend:
 
 This phase does not run screenshot workflows.
 
+## M1.3A test focus
+
+Backend:
+
+- Intake service rejects incomplete Jobs, missing bundles, invalid schemas, unsafe artifact references, oversized or secret-like metadata, and non-registered artifacts.
+- Intake service is idempotent, updates by Source-scoped external Program ID, updates by Program-scoped external Episode ID, and never merges by title alone.
+- HTTP tests cover admin-only staging/intake access and ensure responses do not leak storage keys, absolute paths, or Secret-like data.
+
+Frontend:
+
+- Import Job detail shows guarded intake action only for completed Jobs with a metadata bundle.
+- Failed Jobs cannot be intaken.
+- Validation issues render from mocked API responses.
+- Staging list, empty state, Program detail, and Episode detail use real API contracts through Playwright mocks.
+- No publish, RSS, media download, external Connector execution, or user-visible content controls are shown.
+
+This phase does not run screenshot workflows.
+
 ## M1.1B test focus
 
 Backend:

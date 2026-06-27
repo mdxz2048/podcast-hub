@@ -43,6 +43,7 @@ type Config struct {
 	RunnerPythonBasicImage    string
 	RunnerPythonTelegramImage string
 	RunnerWorkspaceRoot       string
+	ImportArtifactStoreDir    string
 }
 
 func Load() (Config, error) {
@@ -73,6 +74,7 @@ func Load() (Config, error) {
 		RunnerPythonBasicImage:    os.Getenv("RUNNER_PYTHON_BASIC_IMAGE"),
 		RunnerPythonTelegramImage: os.Getenv("RUNNER_PYTHON_TELEGRAM_IMAGE"),
 		RunnerWorkspaceRoot:       getEnv("RUNNER_WORKSPACE_ROOT", ".local/runner-workspaces"),
+		ImportArtifactStoreDir:    getEnv("IMPORT_ARTIFACT_STORE_DIR", ".local/import-artifacts"),
 	}
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err

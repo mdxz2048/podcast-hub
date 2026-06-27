@@ -295,7 +295,15 @@ State meanings:
 - No Program creation.
 - No Source creation/binding.
 - No ImportJob execution.
-- No episode staging/review/RSS publishing.
+- M1.3A supports admin-only intake of a registered `metadata_bundle` artifact into review-pending staging Program/Episode candidates.
+- No review approval, user-visible publishing, RSS generation, scheduled execution, interactive/QR execution, or public media download.
+
+Connector output reminders:
+
+- Connector code never writes directly to production tables.
+- Connector output must be registered as ImportJob artifacts before the platform reads it.
+- Media references inside `metadata_bundle` must be registered relative artifact paths, not URLs, absolute paths, or path traversal values.
+- Connector metadata must not include Secret, Token, Cookie, Authorization, Session, or Password fields.
 - No secret upload/storage in connector package or manifest values.
 
 ## 9. Connector Configuration Lifecycle

@@ -49,4 +49,5 @@ type ImportJobArtifact struct {
 	SizeBytes    int64     `json:"size_bytes"`
 	SHA256       string    `json:"sha256"`
 	CreatedAt    time.Time `json:"created_at"`
+	StorageKey   string    `json:"-"`
 }

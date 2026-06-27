@@ -45,7 +45,10 @@ Account and admin identity routes are connected to real backend APIs. Connector 
 | `/admin/sources/:sourceId` | Connector Source detail | M1.1B | Shows Secret binding state only, never Secret values. |
 | `/admin/secrets` | Secret metadata | M1.1B | Encrypted Secret write and metadata list; no read-value API. |
 | `/admin/import-jobs` | Import job list | M1.2B | Real Import Job metadata list; no fake jobs or Program/Episode output. |
-| `/admin/import-jobs/:jobId` | Import job detail | M1.2B | Real Job metadata, redacted events, artifact metadata, and cancel action. |
+| `/admin/import-jobs/:jobId` | Import job detail | M1.3A | Real Job metadata, redacted events, artifact metadata, cancel action, and guarded manual intake action. |
+| `/admin/staging` | Staging intake list | M1.3A | Real review-pending Program/Episode candidates from completed ImportJob artifacts. |
+| `/admin/staging/programs/:programId` | Staging Program detail | M1.3A | Admin-only candidate metadata; no publish/RSS/user link. |
+| `/admin/staging/episodes/:episodeId` | Staging Episode detail | M1.3A | Admin-only candidate metadata; no path/download/RSS/user link. |
 | `/admin/reviews` | Review queue | M0.2B | Static review queue with Drawer details and confirmation Dialogs. |
 | `/admin/publications` | Publications | M0.2 | Static RSS publication state. |
 | `/admin/users` | Users and access | M0.2B | Static user/access view; no invitations or real user management in M0. |
@@ -105,6 +108,17 @@ M1.2D adds UI access to the Import Job workflow:
 - Artifact display is metadata-only.
 - No publish, RSS, subscription, or media download controls are exposed.
 - `/healthz` is liveness only; `/readyz` is safe readiness only.
+
+Additional real admin staging intake APIs in M1.3A:
+
+- `POST /admin/import-jobs/{jobId}/intake`
+- `GET /admin/import-jobs/{jobId}/intake-status`
+- `GET /admin/staging/programs`
+- `GET /admin/staging/programs/{programId}`
+- `GET /admin/staging/episodes`
+- `GET /admin/staging/episodes/{episodeId}`
+
+M1.3A routes remain admin-only. They expose review-pending candidate metadata only: no Secret values, no storage keys, no absolute paths, no Artifact file contents, no published media URLs, no RSS, and no normal-user visibility.
 
 ## 5. Route Guard States
 

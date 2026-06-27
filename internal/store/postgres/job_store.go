@@ -130,7 +130,7 @@ func (s *JobStore) InsertJobEvent(ctx context.Context, event jobs.ImportJobEvent
 }
 
 func (s *JobStore) ListJobArtifacts(ctx context.Context, jobID string) ([]jobs.ImportJobArtifact, error) {
-	rows, err := s.pool.Query(ctx, `SELECT id::text, import_job_id::text, artifact_type, relative_path, size_bytes, sha256, created_at FROM import_job_artifacts WHERE import_job_id=$1::uuid ORDER BY created_at ASC`, jobID)
+	rows, err := s.pool.Query(ctx, `SELECT id::text, import_job_id::text, artifact_type, relative_path, size_bytes, sha256, created_at, COALESCE(storage_key, '') FROM import_job_artifacts WHERE import_job_id=$1::uuid ORDER BY created_at ASC`, jobID)
 	if err != nil {
 		return nil, fmt.Errorf("list job artifacts: %w", err)
 	}
@@ -138,7 +138,7 @@ func (s *JobStore) ListJobArtifacts(ctx context.Context, jobID string) ([]jobs.I
 	items := []jobs.ImportJobArtifact{}
 	for rows.Next() {
 		var item jobs.ImportJobArtifact
-		if err := rows.Scan(&item.ID, &item.ImportJobID, &item.ArtifactType, &item.RelativePath, &item.SizeBytes, &item.SHA256, &item.CreatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.ImportJobID, &item.ArtifactType, &item.RelativePath, &item.SizeBytes, &item.SHA256, &item.CreatedAt, &item.StorageKey); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -148,9 +148,9 @@ func (s *JobStore) ListJobArtifacts(ctx context.Context, jobID string) ([]jobs.I
 
 func (s *JobStore) InsertJobArtifact(ctx context.Context, artifact jobs.ImportJobArtifact) error {
 	_, err := s.pool.Exec(ctx, `
-		INSERT INTO import_job_artifacts(id, import_job_id, artifact_type, relative_path, size_bytes, sha256, created_at)
-		VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7)
-	`, artifact.ID, artifact.ImportJobID, artifact.ArtifactType, artifact.RelativePath, artifact.SizeBytes, artifact.SHA256, artifact.CreatedAt)
+		INSERT INTO import_job_artifacts(id, import_job_id, artifact_type, relative_path, size_bytes, sha256, created_at, storage_key)
+		VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8)
+	`, artifact.ID, artifact.ImportJobID, artifact.ArtifactType, artifact.RelativePath, artifact.SizeBytes, artifact.SHA256, artifact.CreatedAt, emptyToNil(artifact.StorageKey))
 	if err != nil {
 		return fmt.Errorf("insert job artifact: %w", err)
 	}

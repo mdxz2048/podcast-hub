@@ -20,6 +20,9 @@ import { AdminSecretsPage } from "./routes/AdminSecretsPage";
 import { AdminSourceDetailPage } from "./routes/AdminSourceDetailPage";
 import { AdminSourceNewPage } from "./routes/AdminSourceNewPage";
 import { AdminSourcesPage } from "./routes/AdminSourcesPage";
+import { AdminStagingEpisodeDetailPage } from "./routes/AdminStagingEpisodeDetailPage";
+import { AdminStagingPage } from "./routes/AdminStagingPage";
+import { AdminStagingProgramDetailPage } from "./routes/AdminStagingProgramDetailPage";
 import { AdminUsersPage } from "./routes/AdminUsersPage";
 import { CollectionEditorPage } from "./routes/CollectionEditorPage";
 import { CollectionsPage } from "./routes/CollectionsPage";
@@ -71,6 +74,9 @@ createRoot(document.getElementById("root")!).render(
               <Route path="secrets" element={<AdminSecretsPage />} />
               <Route path="import-jobs" element={<AdminImportJobsPage />} />
               <Route path="import-jobs/:jobId" element={<AdminImportJobDetailPage />} />
+              <Route path="staging" element={<AdminStagingPage />} />
+              <Route path="staging/programs/:programId" element={<AdminStagingProgramDetailPage />} />
+              <Route path="staging/episodes/:episodeId" element={<AdminStagingEpisodeDetailPage />} />
               <Route path="reviews" element={<AdminReviewsPage />} />
               <Route path="users" element={<AdminUsersPage />} />
             </Route>

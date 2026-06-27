@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Ban } from "lucide-react";
+import { ArrowLeft, Ban, PackageCheck } from "lucide-react";
+import type { ApiError } from "../api/client";
 import { cancelImportJob, getImportJob, listImportJobArtifacts, listImportJobEvents } from "../api/jobs";
 import type { ImportJob, ImportJobArtifact, ImportJobEvent } from "../api/jobs";
+import { canRunIntake, getImportJobIntakeStatus, runImportJobIntake } from "../api/staging";
+import type { IntakeRun } from "../api/staging";
 import { getAdminSystemStatus } from "../api/system";
 import type { RunnerStatus } from "../api/system";
 import { Badge } from "../components/Badge";
@@ -15,17 +18,21 @@ export function AdminImportJobDetailPage() {
   const [job, setJob] = useState<ImportJob | null>(null);
   const [events, setEvents] = useState<ImportJobEvent[]>([]);
   const [artifacts, setArtifacts] = useState<ImportJobArtifact[]>([]);
+  const [intakeRun, setIntakeRun] = useState<IntakeRun | null>(null);
+  const [validationIssues, setValidationIssues] = useState<string[]>([]);
   const [runner, setRunner] = useState<RunnerStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   async function reload() {
-    const [jobResult, eventResult, artifactResult, statusResult] = await Promise.all([getImportJob(jobId), listImportJobEvents(jobId), listImportJobArtifacts(jobId), getAdminSystemStatus()]);
+    const [jobResult, eventResult, artifactResult, statusResult, intakeResult] = await Promise.all([getImportJob(jobId), listImportJobEvents(jobId), listImportJobArtifacts(jobId), getAdminSystemStatus(), getImportJobIntakeStatus(jobId)]);
     setJob(jobResult.job);
     setEvents(eventResult.events);
     setArtifacts(artifactResult.artifacts);
     setRunner(statusResult.runner ?? null);
+    setIntakeRun(intakeResult.intake_run);
   }
 
   useEffect(() => {
@@ -38,9 +45,30 @@ export function AdminImportJobDetailPage() {
     setSuccess("取消请求已记录。");
   }
 
+  async function runIntake() {
+    setBusy(true);
+    setError(null);
+    setValidationIssues([]);
+    try {
+      const result = await runImportJobIntake(jobId);
+      setIntakeRun(result.intake_run);
+      setValidationIssues(result.validation_issues ?? []);
+      setSuccess(result.program ? `已导入待审核区：${result.program.title}` : "已导入待审核区。");
+    } catch (err) {
+      const apiError = err as ApiError;
+      setValidationIssues(apiError.validation_issues ?? []);
+      setError(apiError.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loading) return <LoadingState title="正在加载 Import Job" />;
   if (error && !job) return <ErrorState title={error} />;
   if (!job) return <EmptyState title="任务不存在" />;
+
+  const hasMetadataBundle = artifacts.some((artifact) => artifact.artifact_type === "metadata_bundle");
+  const intakeGate = canRunIntake(job, hasMetadataBundle, intakeRun);
 
   return (
     <div className="grid gap-6">
@@ -48,10 +76,35 @@ export function AdminImportJobDetailPage() {
         <ArrowLeft className="h-4 w-4" /> 返回任务列表
       </Link>
       <PageHeader eyebrow="Import Job" title={job.id}>
+        <Button variant="secondary" icon={<PackageCheck className="h-4 w-4" />} disabled={!intakeGate.allowed || busy} onClick={runIntake}>
+          导入到待审核区
+        </Button>
         {(job.status === "queued" || job.status === "running") ? <Button variant="danger" icon={<Ban className="h-4 w-4" />} onClick={cancel}>取消任务</Button> : null}
       </PageHeader>
       {success ? <SuccessFeedback message={success} /> : null}
       {error ? <ErrorState title={error} /> : null}
+      <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">待审核区导入</h2>
+            <p className="mt-2 text-sm text-secondary">{intakeGate.reason}</p>
+            {intakeRun ? (
+              <p className="mt-2 text-sm text-secondary">
+                Intake: <span className="font-medium text-primary">{intakeRun.status}</span> · {formatDate(intakeRun.updated_at)}
+              </p>
+            ) : null}
+          </div>
+          <Badge tone={intakeGate.allowed ? "success" : intakeRun?.status === "failed" ? "danger" : "warning"}>{intakeRun?.status ?? "not_started"}</Badge>
+        </div>
+        {validationIssues.length > 0 ? (
+          <div className="mt-4 rounded-md border border-warning/30 bg-warning/5 p-3 text-sm text-secondary">
+            <p className="font-medium text-primary">Validation issues</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {validationIssues.map((issue) => <li key={issue}>{issue}</li>)}
+            </ul>
+          </div>
+        ) : null}
+      </section>
       {runner && !runner.can_run_jobs && (job.status === "queued" || job.status === "running") ? (
         <section className="rounded-lg border border-warning/30 bg-warning/5 p-4 text-sm text-secondary">
           <p className="font-medium text-primary">Runner disabled</p>

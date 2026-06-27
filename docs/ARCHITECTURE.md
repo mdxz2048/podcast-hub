@@ -78,10 +78,37 @@ Encapsulates business policies:
 - Program lifecycle policy.
 - Source scheduling policy.
 - Connector compatibility policy.
+- Import artifact intake policy.
 - Job state transitions.
 - Review and publication gates.
 - Authorization checks.
 - Rights policy enforcement.
+
+### 3.4.1 Staging Intake
+
+M1.3A adds an explicit Intake Service between ImportJob artifacts and reviewable content.
+
+```text
+Runner output
+-> registered ImportJob artifacts
+-> private artifact store
+-> Intake Service
+-> staging Program/Episode candidates
+-> ReviewItem
+```
+
+The Intake Service:
+
+- Only accepts `completed` Import Jobs.
+- Reads only registered artifact metadata and private promoted artifact files.
+- Parses strict `metadata_bundle` JSON.
+- Creates or updates `review_pending` Program and Episode candidates.
+- Creates staged `MediaAsset` metadata and pending `ReviewItem` records.
+- Writes `PublicationEvent` audit records for staging/submission.
+
+The Intake Service does not execute Connectors, does not read Secret plaintext, does not read Docker Socket, does not read arbitrary workspaces, and does not publish user-visible content.
+
+Program matching is Source scoped: `program_sources(connector_source_id, external_program_id)` is the stable key. A matching title from a different Source never auto-merges content.
 
 ### 3.5 Connector Registry
 

@@ -57,6 +57,7 @@ services:
       SMTP_FROM: ${SMTP_FROM:-no-reply@example.invalid}
       SECRETS_MASTER_KEY: ${SECRETS_MASTER_KEY:-0123456789abcdef0123456789abcdef}
       CONNECTOR_PACKAGE_LOCAL_DIR: /data/connector-packages
+      IMPORT_ARTIFACT_STORE_DIR: /data/import-artifacts
       RUNNER_MODE: disabled
     depends_on:
       postgres:
@@ -71,6 +72,7 @@ services:
       - alpha_connector_packages:/data/connector-packages
       - alpha_staging_store:/data/staging
       - alpha_media_store:/data/media
+      - ./.local/import-artifacts:/data/import-artifacts
     command: ["/app/api"]
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/healthz"]

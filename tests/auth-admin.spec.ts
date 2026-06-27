@@ -73,6 +73,10 @@ async function mockConnectorAdminApi(page: Page) {
   };
   const secrets = [{ id: "secret-1", name: "Session file", secret_type: "file", encryption_version: "aes-gcm-v1", created_at: "2026-01-01T00:00:00Z", binding_count: 0 }];
   const importJob = { id: "job-1", connector_source_id: "s1", connector_version_id: "v-approved", status: "queued", trigger_type: "manual", auth_mode: "reusable_session", execution_mode: "unattended", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" };
+  const completedJob = { ...importJob, id: "job-completed", status: "completed", finished_at: "2026-01-01T00:10:00Z" };
+  const failedJob = { ...importJob, id: "job-failed", status: "failed", failure_code: "fixture_error", failure_message_redacted: "fixture failed" };
+  const stagingProgram = { id: "program-1", canonical_key: "source:s1:program-1", title: "候选节目", description: "等待审核的节目描述", author: "Fixture", language: "zh-CN", status: "review_pending", created_from_source_id: "s1", created_from_job_id: "job-completed", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:10:00Z" };
+  const stagingEpisode = { id: "episode-1", program_id: "program-1", external_episode_id: "ep-1", title: "候选单集", description: "等待审核的单集描述", published_at: "2026-01-01T00:00:00Z", duration_seconds: 120, status: "review_pending", source_job_id: "job-completed", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:10:00Z" };
   await page.route("http://127.0.0.1:8080/admin/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -184,6 +188,82 @@ async function mockConnectorAdminApi(page: Page) {
     }
     if (request.method() === "POST" && url.pathname.endsWith("/admin/import-jobs/job-1/cancel")) {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ job: { ...importJob, status: "cancelled" } }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-1/intake-status")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ intake_run: null }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-completed")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ job: completedJob }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-completed/events")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ events: [] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-completed/artifacts")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ artifacts: [{ id: "bundle-1", import_job_id: "job-completed", artifact_type: "metadata_bundle", relative_path: "bundle.json", size_bytes: 92, sha256: "1".repeat(64), created_at: "2026-01-01T00:00:00Z" }] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-completed/intake-status")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ intake_run: null }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/import-jobs/job-completed/intake")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ intake_run: { id: "intake-1", import_job_id: "job-completed", status: "succeeded", validation_issues_redacted: "[]", program_id: "program-1", created_at: "2026-01-01T00:10:00Z", updated_at: "2026-01-01T00:10:00Z" }, program: stagingProgram }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-invalid")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ job: { ...completedJob, id: "job-invalid" } }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-invalid/events")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ events: [] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-invalid/artifacts")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ artifacts: [{ id: "bundle-bad", import_job_id: "job-invalid", artifact_type: "metadata_bundle", relative_path: "bundle.json", size_bytes: 92, sha256: "2".repeat(64), created_at: "2026-01-01T00:00:00Z" }] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-invalid/intake-status")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ intake_run: { id: "intake-bad", import_job_id: "job-invalid", status: "failed", validation_issues_redacted: "[\"metadata_bundle schema is invalid\"]", created_at: "2026-01-01T00:10:00Z", updated_at: "2026-01-01T00:10:00Z" } }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/import-jobs/job-invalid/intake")) {
+      await route.fulfill({ status: 422, contentType: "application/json", body: JSON.stringify({ error: { code: "metadata_bundle_invalid", message: "metadata bundle 校验失败。", validation_issues: ["metadata_bundle schema is invalid"] } }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-failed")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ job: failedJob }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-failed/events")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ events: [] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-failed/artifacts")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ artifacts: [] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs/job-failed/intake-status")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ intake_run: null }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/staging/programs")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ programs: url.searchParams.get("empty") === "1" ? [] : [stagingProgram] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/staging/programs/program-1")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ program: stagingProgram }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/staging/episodes")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ episodes: url.searchParams.get("empty") === "1" ? [] : [stagingEpisode] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/staging/episodes/episode-1")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ episode: stagingEpisode }) });
       return;
     }
     await route.fulfill({ status: 404, body: "not mocked" });
@@ -319,6 +399,7 @@ test("admin import jobs use real API metadata states", async ({ page }) => {
   await expect(page.getByText("Runner disabled")).toBeVisible();
   await page.goto("/admin/import-jobs/job-1");
   await expect(page.getByText("job.queued")).toBeVisible();
+  await expect(page.getByText("任务完成后才能导入待审核区。")).toBeVisible();
   await expect(page.getByText("queued token=[redacted]")).toBeVisible();
   await expect(page.getByText("episodes/episode-001.json")).toBeVisible();
   await page.getByRole("button", { name: "取消任务" }).click();
@@ -326,6 +407,68 @@ test("admin import jobs use real API metadata states", async ({ page }) => {
   await expect(page.getByText("发布")).toHaveCount(0);
   await expect(page.getByText("RSS")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "下载媒体" })).toHaveCount(0);
+});
+
+test("completed import job can intake into staging", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+  await page.goto("/admin/import-jobs/job-completed");
+  await expect(page.getByText("可导入待审核区。")).toBeVisible();
+  await page.getByRole("button", { name: "导入到待审核区" }).click();
+  await expect(page.getByText("已导入待审核区：候选节目")).toBeVisible();
+  await expect(page.getByText("发布")).toHaveCount(0);
+  await expect(page.getByText("RSS")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "下载媒体" })).toHaveCount(0);
+});
+
+test("failed import job cannot intake", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+  await page.goto("/admin/import-jobs/job-failed");
+  await expect(page.getByText("失败任务不能导入待审核区。")).toBeVisible();
+  await expect(page.getByRole("button", { name: "导入到待审核区" })).toBeDisabled();
+});
+
+test("intake validation issues are visible without leaking paths", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+  await page.goto("/admin/import-jobs/job-invalid");
+  await page.getByRole("button", { name: "导入到待审核区" }).click();
+  await expect(page.getByText("metadata_bundle schema is invalid")).toBeVisible();
+  await expect(page.getByText("/Users/")).toHaveCount(0);
+  await expect(page.getByText("storage_key")).toHaveCount(0);
+});
+
+test("admin staging uses real API empty and detail states", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+  await page.goto("/admin/staging");
+  await expect(page.getByText("候选节目")).toBeVisible();
+  await expect(page.getByText("候选单集")).toBeVisible();
+  await expect(page.getByText("发布")).toHaveCount(0);
+  await expect(page.getByText("RSS")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "下载媒体" })).toHaveCount(0);
+
+  await page.goto("/admin/staging/programs/program-1");
+  await expect(page.getByText("审核前状态")).toBeVisible();
+  await expect(page.getByText("候选节目")).toBeVisible();
+
+  await page.goto("/admin/staging/episodes/episode-1");
+  await expect(page.getByText("媒体仍为私有 staging metadata")).toBeVisible();
+  await expect(page.getByText("候选单集")).toBeVisible();
+});
+
+test("admin staging empty state is driven by API", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+  await page.route("http://127.0.0.1:8080/admin/staging/programs", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ programs: [] }) });
+  });
+  await page.route("http://127.0.0.1:8080/admin/staging/episodes", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ episodes: [] }) });
+  });
+  await page.goto("/admin/staging");
+  await expect(page.getByText("待审核区暂无内容")).toBeVisible();
 });
 
 test("admin can create manual import job from runnable source", async ({ page }) => {

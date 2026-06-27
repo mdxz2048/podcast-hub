@@ -10,10 +10,12 @@ services:
       RUNNER_PYTHON_BASIC_IMAGE: ${RUNNER_PYTHON_BASIC_IMAGE:-python:3.12-alpine}
       RUNNER_PYTHON_TELEGRAM_IMAGE: ${RUNNER_PYTHON_TELEGRAM_IMAGE:-python:3.12-alpine}
       RUNNER_WORKSPACE_ROOT: /workspace
+      IMPORT_ARTIFACT_STORE_DIR: /artifacts
       RUNNER_FIXTURE_PACKAGE_DIR: /app/internal/runner/testdata
     user: "${RUNNER_UID:-10001}:${RUNNER_GID:-10001}"
     volumes:
       - runner_workspace:/workspace
+      - ../.local/import-artifacts:/artifacts
       - /var/run/docker.sock:/var/run/docker.sock
     network_mode: bridge
 

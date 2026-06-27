@@ -140,6 +140,11 @@ Security reminder:
 - `STAGING_STORE_DIR` and `MEDIA_STORE_DIR`
   - Private Alpha volume mount points.
   - Not served by the frontend or API as static public files.
+- `IMPORT_ARTIFACT_STORE_DIR`
+  - Private filesystem store for promoted ImportJob artifacts used by M1.3A intake.
+  - Default: `.local/import-artifacts`.
+  - Must not be the same path as `RUNNER_WORKSPACE_ROOT`.
+  - Must remain git-ignored and must not be exposed as a static public directory.
 
 Generate a local Secret Master Key with one of:
 

@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/mdxz2048/podcast-hub/internal/jobs"
@@ -46,6 +47,7 @@ type Config struct {
 	ExecutionTimeout         time.Duration
 	CancellationPollInterval time.Duration
 	SecretProvider           SecretProvider
+	ArtifactStoreRoot        string
 }
 
 type Runner struct {
@@ -130,6 +132,14 @@ func (r *Runner) RunOnce(ctx context.Context) error {
 		return artifactErr
 	}
 	for _, artifact := range artifacts {
+		if r.config.ArtifactStoreRoot != "" {
+			storageKey, err := r.promoteArtifact(outputDir, artifact)
+			if err != nil {
+				_, _ = r.jobs.TransitionJob(ctx, job.ID, jobs.JobStatusFailed, "artifact_promote_failed", redact(err.Error()))
+				return err
+			}
+			artifact.StorageKey = storageKey
+		}
 		_ = r.jobs.AppendArtifact(ctx, artifact)
 	}
 	if protocol.TerminalType == "completed" {
@@ -138,6 +148,35 @@ func (r *Runner) RunOnce(ctx context.Context) error {
 	}
 	_, err = r.jobs.TransitionJob(ctx, job.ID, jobs.JobStatusFailed, "connector_failed", "Connector reported failure.")
 	return err
+}
+
+func (r *Runner) promoteArtifact(outputDir string, artifact jobs.ImportJobArtifact) (string, error) {
+	rel, err := cleanRelativePath(artifact.RelativePath)
+	if err != nil {
+		return "", err
+	}
+	storageKey := filepath.Join(artifact.ImportJobID, rel)
+	sourcePath := filepath.Join(outputDir, rel)
+	targetPath := filepath.Join(r.config.ArtifactStoreRoot, storageKey)
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0o700); err != nil {
+		return "", fmt.Errorf("create artifact store directory: %w", err)
+	}
+	body, err := os.ReadFile(sourcePath)
+	if err != nil {
+		return "", fmt.Errorf("read artifact for promotion: %w", err)
+	}
+	if err := os.WriteFile(targetPath, body, 0o600); err != nil {
+		return "", fmt.Errorf("write artifact store file: %w", err)
+	}
+	return storageKey, nil
+}
+
+func cleanRelativePath(value string) (string, error) {
+	cleaned := filepath.Clean(strings.TrimSpace(value))
+	if cleaned == "." || filepath.IsAbs(cleaned) || strings.HasPrefix(cleaned, ".."+string(filepath.Separator)) || cleaned == ".." {
+		return "", ErrArtifactPathEscape
+	}
+	return cleaned, nil
 }
 
 func (r *Runner) executionTimeout(job jobs.ImportJob) time.Duration {

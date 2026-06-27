@@ -4,7 +4,7 @@
 
 The Job Protocol defines how the platform communicates with Connectors and how Connectors return events and outputs.
 
-Status in M1.2C: Import Jobs can be created through admin APIs, and the independent Runner can execute only the test fixture in trusted-admin Docker mode. Real external Connectors, duoting, scheduled Jobs, interactive/QR Jobs, Program/Episode staging, and RSS publication are not implemented.
+Status in M1.3A: Import Jobs can be created through admin APIs, the independent Runner can execute only the test fixture in trusted-admin Docker mode, and completed fixture output can be manually intaken into admin-only review-pending staging content. Real external Connectors, duoting, scheduled Jobs, interactive/QR Jobs, review approval, publishing, and RSS publication are not implemented.
 
 The protocol is intentionally file and stream based:
 
@@ -359,6 +359,51 @@ Connectors should provide stable identifiers:
 The platform should use these identifiers to avoid duplicate staging. If duplicates are uncertain, the Episode Review UI should ask a reviewer to resolve the conflict.
 
 Retries must not overwrite prior job artifacts. Each attempt receives its own job ID or attempt namespace.
+
+## 9.1 Metadata Bundle Artifact
+
+M1.3A defines a platform-readable content metadata bundle. The bundle must be declared as an `artifact_ready` event and registered in `import_job_artifacts` with `artifact_type: "metadata_bundle"`.
+
+Example:
+
+```json
+{
+  "schema_version": 1,
+  "program": {
+    "external_id": "source-program-id",
+    "title": "节目标题",
+    "description": "节目描述",
+    "language": "zh-CN",
+    "author": "作者或来源",
+    "cover_artifact": "cover.jpg"
+  },
+  "episodes": [
+    {
+      "external_id": "episode-id",
+      "title": "单集标题",
+      "description": "单集描述",
+      "published_at": "2026-06-27T00:00:00Z",
+      "duration_seconds": 1200,
+      "audio_artifact": "episode.mp3",
+      "cover_artifact": "episode-cover.jpg",
+      "metadata": {}
+    }
+  ]
+}
+```
+
+Validation rules:
+
+- Unknown JSON fields are rejected.
+- `schema_version` must be `1`.
+- Program and Episode titles, descriptions, author, language, and metadata have length limits.
+- `metadata` must not contain secret-like keys or values such as `secret`, `token`, `cookie`, `authorization`, `session`, or `password`.
+- `audio_artifact` and `cover_artifact` values must reference registered ImportJob artifacts by relative path.
+- Absolute paths, path traversal, and URLs are rejected.
+- The platform does not download media from Connector-provided URLs.
+- API responses do not expose absolute paths, private storage keys, or file contents.
+
+Successful intake creates or updates review-pending staging Program/Episode candidates and pending ReviewItems only. It does not publish content or make media user-visible.
 
 ## 10. Manual Import Protocol
 

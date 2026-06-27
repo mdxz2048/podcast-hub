@@ -1,6 +1,7 @@
 export interface ApiError extends Error {
   code: string;
   status: number;
+  validation_issues?: string[];
 }
 
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -25,16 +26,19 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
   if (!response.ok) {
     let code = "unknown_error";
     let message = "请求失败，请稍后重试。";
+    let validationIssues: string[] | undefined;
     try {
-      const payload = await response.json() as { error?: { code?: string; message?: string } };
+      const payload = await response.json() as { error?: { code?: string; message?: string; validation_issues?: string[] } };
       code = payload.error?.code ?? code;
       message = payload.error?.message ?? message;
+      validationIssues = payload.error?.validation_issues;
     } catch {
       // keep generic
     }
     const err = new Error(message) as ApiError;
     err.code = code;
     err.status = response.status;
+    err.validation_issues = validationIssues;
     throw err;
   }
   if (response.status === 204) {

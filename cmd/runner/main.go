@@ -55,7 +55,7 @@ func main() {
 		Image:                image,
 		ConnectorPackagePath: getEnv("RUNNER_FIXTURE_PACKAGE_DIR", "internal/runner/testdata"),
 	}}
-	r := runner.New(jobService, executor, runner.Config{WorkspaceRoot: os.Getenv("RUNNER_WORKSPACE_ROOT"), SecretProvider: sourceService})
+	r := runner.New(jobService, executor, runner.Config{WorkspaceRoot: os.Getenv("RUNNER_WORKSPACE_ROOT"), SecretProvider: sourceService, ArtifactStoreRoot: getEnv("IMPORT_ARTIFACT_STORE_DIR", ".local/import-artifacts")})
 	if err := r.RunOnce(ctx); err != nil {
 		if errors.Is(err, runner.ErrNoQueuedJob) {
 			logger.Info("no queued import job")

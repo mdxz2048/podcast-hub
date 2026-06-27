@@ -1,7 +1,7 @@
 # Podcast Hub
 
 Podcast Hub is a content ingestion and publishing platform.  
-Current phase includes real account/admin flows, Connector registry, Source/Secret metadata, Import Job lifecycle, fixture-only Runner protocol, trusted-admin Docker Runner boundaries, and local/internal Alpha deployment preparation.
+Current phase includes real account/admin flows, Connector registry, Source/Secret metadata, Import Job lifecycle, fixture-only Runner protocol, trusted-admin Docker Runner boundaries, local/internal Alpha deployment preparation, and admin-only staging intake for completed fixture artifacts.
 
 ## Local development
 
@@ -64,6 +64,18 @@ corepack pnpm dev
 - `POST /admin/secrets/{secretId}/revoke` (admin only)
 - `POST /admin/sources/{sourceId}/secret-bindings` (admin only)
 - `DELETE /admin/sources/{sourceId}/secret-bindings/{bindingId}` (admin only)
+- `GET /admin/import-jobs` (admin only)
+- `POST /admin/sources/{sourceId}/import-jobs` (admin only)
+- `GET /admin/import-jobs/{jobId}` (admin only)
+- `GET /admin/import-jobs/{jobId}/events` (admin only)
+- `GET /admin/import-jobs/{jobId}/artifacts` (admin only)
+- `POST /admin/import-jobs/{jobId}/cancel` (admin only)
+- `POST /admin/import-jobs/{jobId}/intake` (admin only)
+- `GET /admin/import-jobs/{jobId}/intake-status` (admin only)
+- `GET /admin/staging/programs` (admin only)
+- `GET /admin/staging/programs/{programId}` (admin only)
+- `GET /admin/staging/episodes` (admin only)
+- `GET /admin/staging/episodes/{episodeId}` (admin only)
 
 ## M1.1A scope note
 
@@ -108,7 +120,7 @@ Local/internal Alpha files:
 - `docs/ALPHA_DEPLOYMENT.md`
 - `docs/OPERATIONS_ADMIN_ALPHA.md`
 
-The API service starts with `RUNNER_MODE=disabled` by default and does not mount Docker socket access. Start the Runner separately only for trusted-admin fixture execution. Alpha still does not support public deployment, RSS, real duoting, scheduled jobs, interactive/QR jobs, user subscriptions, or real media download.
+The API service starts with `RUNNER_MODE=disabled` by default and does not mount Docker socket access. Start the Runner separately only for trusted-admin fixture execution. Alpha still does not support public deployment, RSS, real duoting, scheduled jobs, interactive/QR jobs, user subscriptions, real media download, review approval, or publishing. M1.3A staging content is admin-only and not visible to normal users.
 
 Run the optional real Docker fixture smoke test explicitly:
 

@@ -4,7 +4,7 @@
 
 This is a local/internal Alpha runbook. It is not a public production deployment guide.
 
-M1.2D Alpha supports:
+Deployable Alpha supports:
 
 - Go API
 - PostgreSQL
@@ -13,8 +13,9 @@ M1.2D Alpha supports:
 - Connector package metadata storage
 - Import Job metadata APIs
 - Separate trusted-admin Runner startup for fixture execution
+- Admin-only staging intake for completed fixture artifacts
 
-M1.2D Alpha does not support:
+Deployable Alpha does not support:
 
 - public HTTPS
 - public internet deployment
@@ -23,7 +24,7 @@ M1.2D Alpha does not support:
 - real external Connector execution
 - scheduled Jobs
 - interactive or QR Jobs
-- Program/Episode/user subscription publishing
+- review approval, Program/Episode/user subscription publishing
 - real media download
 
 ## Environment
@@ -43,6 +44,8 @@ openssl rand -base64 32
 ```
 
 Use the generated value as `SECRETS_MASTER_KEY` in the local environment only.
+
+`IMPORT_ARTIFACT_STORE_DIR` must be a private directory shared by the API and Runner when using M1.3A intake. The default Alpha compose files bind this to `.local/import-artifacts`; keep it out of Git and do not serve it as static files.
 
 ## Start Dependencies and API
 
@@ -101,6 +104,8 @@ go run ./cmd/runner
 
 Do not use this for real duoting or untrusted third-party Connectors. M1.2D does not provide a strong sandbox for arbitrary Connector code.
 
+When using the compose-based Runner, `deploy/docker-compose.runner-alpha.yml` mounts `../.local/import-artifacts` into the Runner as `/artifacts`. Use the same host path for the API so intake can read only promoted, registered artifacts after the Runner workspace has been cleaned.
+
 ## Logs
 
 API and Runner logs must not include:
@@ -129,4 +134,4 @@ Minimal local restore:
 cat podcast_hub_alpha.sql | docker compose -f docker-compose.alpha.yml exec -T postgres psql -U podcast_hub podcast_hub
 ```
 
-Connector package metadata and future staging storage must be backed up separately from PostgreSQL. Do not store real secrets or media in Git.
+Connector package metadata, private ImportJob artifacts, and future staging storage must be backed up separately from PostgreSQL. Do not store real secrets or media in Git.

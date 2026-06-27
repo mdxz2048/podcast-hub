@@ -16,6 +16,8 @@ import (
 	"github.com/mdxz2048/podcast-hub/config"
 	"github.com/mdxz2048/podcast-hub/internal/auth"
 	"github.com/mdxz2048/podcast-hub/internal/connectors"
+	"github.com/mdxz2048/podcast-hub/internal/content"
+	"github.com/mdxz2048/podcast-hub/internal/intake"
 	"github.com/mdxz2048/podcast-hub/internal/jobs"
 	"github.com/mdxz2048/podcast-hub/internal/security"
 	"github.com/mdxz2048/podcast-hub/internal/sources"
@@ -29,6 +31,8 @@ type Server struct {
 	connectors       *connectors.Service
 	sources          *sources.Service
 	jobs             *jobs.Service
+	content          *content.Service
+	intake           *intake.Service
 	resolveSessionFn func(ctx context.Context, token string) (auth.Session, auth.User, error)
 }
 
@@ -47,8 +51,8 @@ type HealthDependencies struct {
 	SMTPPort int
 }
 
-func NewServer(cfg config.Config, authService *auth.Service, turnstile security.TurnstileVerifier, health HealthDependencies, connectorService *connectors.Service, sourceService *sources.Service, jobService *jobs.Service) *Server {
-	return &Server{
+func NewServer(cfg config.Config, authService *auth.Service, turnstile security.TurnstileVerifier, health HealthDependencies, connectorService *connectors.Service, sourceService *sources.Service, jobService *jobs.Service, extras ...any) *Server {
+	server := &Server{
 		cfg:        cfg,
 		auth:       authService,
 		turnstile:  turnstile,
@@ -57,6 +61,15 @@ func NewServer(cfg config.Config, authService *auth.Service, turnstile security.
 		sources:    sourceService,
 		jobs:       jobService,
 	}
+	for _, extra := range extras {
+		switch value := extra.(type) {
+		case *content.Service:
+			server.content = value
+		case *intake.Service:
+			server.intake = value
+		}
+	}
+	return server
 }
 
 func (s *Server) Router() stdhttp.Handler {
@@ -116,6 +129,12 @@ func (s *Server) Router() stdhttp.Handler {
 		r.Get("/import-jobs/{jobId}/events", s.handleAdminImportJobEvents)
 		r.Get("/import-jobs/{jobId}/artifacts", s.handleAdminImportJobArtifacts)
 		r.Post("/import-jobs/{jobId}/cancel", s.handleAdminImportJobCancel)
+		r.Post("/import-jobs/{jobId}/intake", s.handleAdminImportJobIntake)
+		r.Get("/import-jobs/{jobId}/intake-status", s.handleAdminImportJobIntakeStatus)
+		r.Get("/staging/programs", s.handleAdminStagingPrograms)
+		r.Get("/staging/programs/{programId}", s.handleAdminStagingProgram)
+		r.Get("/staging/episodes", s.handleAdminStagingEpisodes)
+		r.Get("/staging/episodes/{episodeId}", s.handleAdminStagingEpisode)
 	})
 	return router
 }

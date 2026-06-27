@@ -15,7 +15,9 @@ import (
 	"github.com/mdxz2048/podcast-hub/config"
 	"github.com/mdxz2048/podcast-hub/internal/auth"
 	"github.com/mdxz2048/podcast-hub/internal/connectors"
+	"github.com/mdxz2048/podcast-hub/internal/content"
 	httpserver "github.com/mdxz2048/podcast-hub/internal/http"
+	"github.com/mdxz2048/podcast-hub/internal/intake"
 	"github.com/mdxz2048/podcast-hub/internal/jobs"
 	"github.com/mdxz2048/podcast-hub/internal/mail"
 	"github.com/mdxz2048/podcast-hub/internal/ratelimit"
@@ -67,6 +69,9 @@ func main() {
 	}
 	sourceService := sources.NewService(postgres.NewSourceStore(dbPool), connectorStore, secretCipher)
 	jobService := jobs.NewService(postgres.NewJobStore(dbPool), sourceService)
+	contentStore := postgres.NewContentStore(dbPool)
+	contentService := content.NewService(contentStore)
+	intakeService := intake.NewService(jobService, contentStore, intake.FileArtifactReader{Root: cfg.ImportArtifactStoreDir})
 	authService := auth.NewService(store, mailerImpl, turnstileVerifier, limiter, auth.Options{
 		SessionPepper:    cfg.SessionPepper,
 		AuthCodePepper:   cfg.AuthCodePepper,
@@ -81,7 +86,7 @@ func main() {
 		Redis:    redisClient,
 		SMTPHost: cfg.SMTPHost,
 		SMTPPort: cfg.SMTPPort,
-	}, connectorService, sourceService, jobService)
+	}, connectorService, sourceService, jobService, contentService, intakeService)
 	httpSrv := &stdhttp.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           server.Router(),
