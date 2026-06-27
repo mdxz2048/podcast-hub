@@ -76,6 +76,8 @@ The API layer assigns every request a server-generated opaque correlation ID bef
 
 User catalog and collection APIs are read-model endpoints over the publication boundary. They never create a second Program or Episode model and never let a user infer whether an unauthorized Program, Episode, Source, Connector, Job, Artifact, or media object exists.
 
+M1.5C connects user and admin RSS management pages to the publication API. Plaintext RSS tokens exist only in create or rotate responses and transient UI state. List APIs and admin APIs return token prefixes only. RSS XML and enclosure audit metadata records redacted token values rather than full tokens or full private URLs.
+
 ### 3.4 Domain Service Layer
 
 Encapsulates business policies:

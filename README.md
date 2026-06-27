@@ -85,6 +85,8 @@ corepack pnpm dev
 - `GET /admin/programs/{programId}/access-grants` (admin only)
 - `POST /admin/programs/{programId}/access-grants` (admin only)
 - `POST /admin/program-access/{grantId}/revoke` (admin only)
+- `GET /admin/rss-feeds` (admin only, safe metadata)
+- `POST /admin/rss-feeds/{feedId}/revoke` (admin only)
 - `PATCH /admin/programs/{programId}` (admin only)
 - `POST /admin/programs/{programId}/submit-review` (admin only)
 - `POST /admin/programs/{programId}/publish` (admin only)
@@ -104,6 +106,11 @@ corepack pnpm dev
 - `DELETE /me/collections/{collectionId}` (owner only)
 - `POST /me/collections/{collectionId}/programs` (owner only, authorized Program only)
 - `DELETE /me/collections/{collectionId}/programs/{programId}` (owner only)
+- `GET /me/rss-feeds` (logged-in active user)
+- `POST /me/rss-feeds` (returns plaintext token once)
+- `POST /me/rss-feeds/{feedId}/rotate` (returns plaintext token once)
+- `POST /me/rss-feeds/{feedId}/revoke`
+- `DELETE /me/rss-feeds/{feedId}`
 
 ## M1.1A scope note
 

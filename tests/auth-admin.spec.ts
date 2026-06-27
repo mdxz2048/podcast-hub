@@ -84,6 +84,7 @@ async function mockConnectorAdminApi(page: Page) {
     { id: "review-episode", target_type: "episode", target_id: "episode-1", review_kind: "metadata", status: "pending", review_note: "", created_at: "2026-01-01T00:10:00Z" }
   ];
   let grants = [{ id: "grant-1", user_id: "user-1", program_id: "program-1", status: "active", reason: "beta", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" }];
+  let rssFeeds = [{ id: "feed-1", user_id: "user-1", user_email_hint: "u***", name: "Private Feed", token_prefix: "tok_pref", status: "active", created_at: "2026-01-01T00:00:00Z", last_used_at: "2026-01-01T00:05:00Z" }];
   await page.route("http://127.0.0.1:8080/admin/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -214,6 +215,15 @@ async function mockConnectorAdminApi(page: Page) {
     }
     if (request.method() === "GET" && url.pathname.endsWith("/admin/programs")) {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ programs: [adminProgram] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/rss-feeds")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ feeds: rssFeeds }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/rss-feeds/feed-1/revoke")) {
+      rssFeeds = rssFeeds.map((feed) => feed.id === "feed-1" ? { ...feed, status: "revoked", revoked_at: "2026-01-01T00:20:00Z" } : feed);
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ feed: rssFeeds[0] }) });
       return;
     }
     if (request.method() === "GET" && url.pathname.endsWith("/admin/programs/program-1")) {
@@ -724,6 +734,20 @@ test("admin can grant and revoke program access through real API contract", asyn
   await page.locator("article").filter({ hasText: "User user-1" }).getByRole("button", { name: "撤销" }).click();
   await expect(page.getByText("授权已撤销。")).toBeVisible();
   await expect(page.getByText("token")).toHaveCount(0);
+});
+
+test("admin can revoke rss feeds without plaintext token access", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+
+  await page.goto("/admin/rss-feeds");
+  await expect(page.getByText("Private Feed")).toBeVisible();
+  await expect(page.getByText("tok_pref")).toBeVisible();
+  await expect(page.getByText("new-token-secret")).toHaveCount(0);
+  await page.getByRole("button", { name: "撤销" }).click();
+  await page.getByRole("button", { name: "确认撤销" }).click();
+  await expect(page.getByText("RSS Feed 已撤销。")).toBeVisible();
+  await expect(page.getByText("revoked", { exact: true })).toBeVisible();
 });
 
 test("admin episode review publish and archive use real API", async ({ page }) => {

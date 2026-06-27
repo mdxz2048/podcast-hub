@@ -411,10 +411,7 @@ func (f fixedFileInfo) IsDir() bool        { return false }
 func (f fixedFileInfo) Sys() any           { return nil }
 
 func redactOpaqueToken(token string) string {
-	if len(token) <= 8 {
-		return "[redacted]"
-	}
-	return token[:4] + "...[redacted]"
+	return publication.RedactOpaqueToken(token)
 }
 
 func sanitizeRemoteAddr(value string) string {

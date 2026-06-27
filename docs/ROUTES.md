@@ -26,7 +26,7 @@ Account and admin identity routes are connected to real backend APIs. Connector 
 | `/collections` | My Collections | M1.3C | Real owner-scoped personal collections. |
 | `/collections/:collectionId` | Collection detail/editor | M1.3C | Real collection edit, add, and remove Program API. |
 | `/collections/:collectionId/subscribe` | Collection RSS subscription | M0.2A | Static simulated RSS URL using example.invalid; no RSS XML generation. |
-| `/rss` | RSS feeds | M0.2 | Static token state only. |
+| `/rss` | RSS feeds | M1.5C | Real private RSS Feed list/create/rotate/revoke/delete APIs. |
 | `/account` | Account | M0.2 | Static account overview. |
 | `/account/sessions` | Account sessions | M0.2 | Static future capability. |
 
@@ -52,6 +52,7 @@ Account and admin identity routes are connected to real backend APIs. Connector 
 | `/admin/staging/episodes/:episodeId` | Staging Episode detail | M1.3A | Admin-only candidate metadata; no path/download/RSS/user link. |
 | `/admin/reviews` | Review queue | M1.3B | Real pending/approved/rejected review items with approve/reject actions. |
 | `/admin/review/:reviewId` | Review detail | M1.3B | Real review detail and approve/reject actions. |
+| `/admin/rss-feeds` | RSS feed metadata | M1.5C | Real safe RSS metadata list and admin revoke. |
 | `/admin/publications` | Publications | M0.2 | Static RSS publication state. |
 | `/admin/users` | Users and access | M0.2B | Static user/access view; no invitations or real user management in M0. |
 | `/admin/audit` | Audit log | M0.2 | Static audit list. |
@@ -164,6 +165,18 @@ M1.3C admin access APIs:
 - `POST /admin/program-access/{grantId}/revoke`
 
 Normal-user routes expose only authorized, published catalog data. Unauthorized reads use generic not-found errors and never disclose Program titles, Source, Connector, ImportJob, Artifact, staging, storage keys, Secrets, or tokens.
+
+M1.5C RSS APIs are connected to frontend routes:
+
+- `GET /me/rss-feeds`
+- `POST /me/rss-feeds`
+- `POST /me/rss-feeds/{feedId}/rotate`
+- `POST /me/rss-feeds/{feedId}/revoke`
+- `DELETE /me/rss-feeds/{feedId}`
+- `GET /admin/rss-feeds`
+- `POST /admin/rss-feeds/{feedId}/revoke`
+
+Only create and rotate responses expose plaintext token URLs. RSS list and admin list responses expose token prefixes only.
 
 ## 5. Route Guard States
 

@@ -269,7 +269,7 @@ func (s *Service) ResolveFeedMedia(ctx context.Context, token string, episodeID 
 		_ = s.store.TouchRSSFeed(ctx, *asset.FeedID, time.Now())
 	}
 	if asset.FeedOwnerUserID != nil {
-		_ = s.audit.InsertAuditLog(ctx, auth.AuditEvent{TargetUserID: asset.FeedOwnerUserID, EventType: "publication.feed_media_accessed", Result: "success", Metadata: `{"episode_id":"` + episodeID + `"}`})
+		_ = s.audit.InsertAuditLog(ctx, auth.AuditEvent{TargetUserID: asset.FeedOwnerUserID, EventType: "publication.feed_media_accessed", Result: "success", Metadata: `{"episode_id":"` + episodeID + `","token":"` + RedactOpaqueToken(token) + `"}`})
 	}
 	return asset, nil
 }
@@ -308,8 +308,15 @@ func (s *Service) BuildPrivateFeed(ctx context.Context, token string, baseURL st
 		return FeedDocument{}, nil, err
 	}
 	_ = s.store.TouchRSSFeed(ctx, feed.ID, time.Now())
-	_ = s.audit.InsertAuditLog(ctx, auth.AuditEvent{TargetUserID: &user.ID, EventType: "publication.rss_feed_accessed", Result: "success", Metadata: `{"feed_id":"` + feed.ID + `","item_count":` + fmt.Sprintf("%d", len(items)) + `}`})
+	_ = s.audit.InsertAuditLog(ctx, auth.AuditEvent{TargetUserID: &user.ID, EventType: "publication.rss_feed_accessed", Result: "success", Metadata: `{"feed_id":"` + feed.ID + `","item_count":` + fmt.Sprintf("%d", len(items)) + `,"token":"` + RedactOpaqueToken(token) + `"}`})
 	return doc, body, nil
+}
+
+func RedactOpaqueToken(token string) string {
+	if len(token) <= 8 {
+		return "[redacted]"
+	}
+	return token[:4] + "...[redacted]"
 }
 
 func tokenPrefix(rawToken string) string {

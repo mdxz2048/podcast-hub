@@ -1,4 +1,4 @@
-import { Activity, ClipboardList, Inbox, KeyRound, Library, RadioTower, Settings, ShieldCheck, UsersRound } from "lucide-react";
+import { Activity, ClipboardList, Inbox, KeyRound, Library, Radio, RadioTower, Settings, ShieldCheck, UsersRound } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { Button } from "../components/Button";
@@ -12,6 +12,7 @@ const nav = [
   { to: "/admin/import-jobs", label: "导入任务", icon: ClipboardList },
   { to: "/admin/staging", label: "待审核区", icon: Inbox },
   { to: "/admin/reviews", label: "审核", icon: ShieldCheck },
+  { to: "/admin/rss-feeds", label: "Feed", icon: Radio },
   { to: "/admin/users", label: "用户", icon: UsersRound },
   { to: "/admin/settings", label: "设置", icon: Settings }
 ];

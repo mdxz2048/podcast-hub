@@ -17,6 +17,7 @@
 - M1.5B: **Completed in current workspace changes** (private RSS feeds, feed token rotation/revocation, and token-backed private enclosures)
 - P0 User Beta baseline: **Completed in current workspace changes** (request correlation IDs are now server-generated random values with no hostname, `.local`, path, token, cookie, or caller-supplied content)
 - M1.3C: **Completed in current workspace changes** (real authorized user catalog APIs, personal collections, and admin Program access-grant UI/API integration)
+- M1.5C: **Completed in current workspace changes** (real user RSS management page, admin RSS metadata/revoke page, and RSS token redaction audit call points)
 
 ## Clarifications
 
@@ -26,6 +27,6 @@
 - Real external Connector execution, scheduled jobs, interactive/QR jobs, real duoting, untrusted third-party Connector isolation, and production deployment are **not** implemented yet.
 - M1.3A Program/Episode records are admin-only staging candidates. They are not published and are not visible to normal users.
 - Private media delivery and private RSS now depend on explicit selected-user Program access grants rather than public catalog exposure.
-- The `/rss` frontend page is currently a mock management surface; the backend RSS APIs and private enclosure APIs are implemented separately.
+- The `/rss` frontend page now uses real RSS API contracts and stores plaintext token URLs only in transient React state after create or rotate.
 - User Program and Collection pages now read real API contracts. Collection reads intentionally hide Programs after access revocation without deleting historical membership rows.
 - Error responses may include `request_id` for support correlation, but the value is opaque and non-semantic. Clients must not treat it as stable identity or derive environment information from it.

@@ -18,6 +18,7 @@ import { AdminProgramDetailPage } from "./routes/AdminProgramDetailPage";
 import { AdminProgramsPage } from "./routes/AdminProgramsPage";
 import { AdminReviewDetailPage } from "./routes/AdminReviewDetailPage";
 import { AdminReviewsPage } from "./routes/AdminReviewsPage";
+import { AdminRssFeedsPage } from "./routes/AdminRssFeedsPage";
 import { AdminSecretsPage } from "./routes/AdminSecretsPage";
 import { AdminSourceDetailPage } from "./routes/AdminSourceDetailPage";
 import { AdminSourceNewPage } from "./routes/AdminSourceNewPage";
@@ -84,6 +85,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="staging/episodes/:episodeId" element={<AdminStagingEpisodeDetailPage />} />
               <Route path="reviews" element={<AdminReviewsPage />} />
               <Route path="review/:reviewId" element={<AdminReviewDetailPage />} />
+              <Route path="rss-feeds" element={<AdminRssFeedsPage />} />
               <Route path="users" element={<AdminUsersPage />} />
             </Route>
           </Routes>

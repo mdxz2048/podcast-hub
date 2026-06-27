@@ -191,6 +191,19 @@ Frontend:
 - Playwright tests mock real API contracts for user Program browse/detail, personal collection create/edit/remove, and admin Program access grant/revoke.
 - User pages must not read `src/mock/data` as a fallback for catalog or collection content.
 
+## M1.5C test focus
+
+Backend:
+
+- HTTP tests cover RSS XML and enclosure access with token redaction in audit metadata.
+- Existing private media and RSS tests continue to cover invalid token, revoked token, token rotation invalidation, access-grant revocation, HEAD, Range, ETag, and XML escaping.
+
+Frontend:
+
+- Playwright tests mock real `/me/rss-feeds` and `/admin/rss-feeds` API contracts.
+- User RSS tests verify one-time token URL display, no token re-display after close, rotate, revoke, and no local/session storage persistence.
+- Admin RSS tests verify metadata-only list and revoke without plaintext token access.
+
 Frontend:
 
 - Admin Playwright tests cover Source empty state, Source creation from approved version, Secret metadata display, and absence of runtime/download controls.

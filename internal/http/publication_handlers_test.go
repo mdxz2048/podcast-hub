@@ -241,6 +241,9 @@ func TestPrivateRSSFeedAndEnclosureSecurity(t *testing.T) {
 	if feedRec.Header().Get("X-Robots-Tag") != "noindex, nofollow, noarchive" {
 		t.Fatalf("expected robots tag")
 	}
+	if len(state.auditEvents) == 0 || strings.Contains(state.auditEvents[len(state.auditEvents)-1].Metadata, "token-active") || !strings.Contains(state.auditEvents[len(state.auditEvents)-1].Metadata, "[redacted]") {
+		t.Fatalf("rss audit token redaction failed: %+v", state.auditEvents)
+	}
 
 	oldETag := feedRec.Header().Get("ETag")
 	cacheReq := httptest.NewRequest(http.MethodGet, "/rss/private/token-active.xml", nil)
@@ -260,6 +263,9 @@ func TestPrivateRSSFeedAndEnclosureSecurity(t *testing.T) {
 	}
 	if mediaRec.Body.String() != "EDIA" {
 		t.Fatalf("expected partial enclosure body, got %q", mediaRec.Body.String())
+	}
+	if strings.Contains(state.auditEvents[len(state.auditEvents)-1].Metadata, "token-active") || !strings.Contains(state.auditEvents[len(state.auditEvents)-1].Metadata, "[redacted]") {
+		t.Fatalf("enclosure audit token redaction failed: %+v", state.auditEvents[len(state.auditEvents)-1])
 	}
 
 	state.feedByToken[hashToken("token-active", "pepper")] = publication.RSSFeed{ID: "feed-1", UserID: "user-1", Name: "My Feed", TokenPrefix: "token-ac", Status: publication.FeedStatusRevoked, CreatedAt: time.Now()}

@@ -163,3 +163,7 @@ M1.3B adds no new required environment variables. Review and publication state t
 ## M1.3C environment additions
 
 M1.3C adds no new required environment variables. User catalog and collection APIs use the existing PostgreSQL database, session cookie, CSRF cookie/header, and Program access-grant tables.
+
+## M1.5C environment additions
+
+M1.5C adds no new required environment variables. Private RSS management uses the existing `SESSION_PEPPER`-backed session cookies, CSRF cookie/header, `rss_feeds.token_hash`, and the RSS token pepper already configured for the publication service.
