@@ -1,7 +1,7 @@
 # Podcast Hub
 
 Podcast Hub is a content ingestion and publishing platform.  
-Current phase includes real account/admin flows, Connector registry, Source/Secret metadata, Import Job lifecycle, fixture-only Runner protocol, trusted-admin Docker Runner boundaries, local/internal Alpha deployment preparation, admin-only staging intake, administrator review/publish state controls, private media/RSS backend flows, and privacy-safe request correlation IDs.
+Current phase includes real account/admin flows, Connector registry, Source/Secret metadata, Import Job lifecycle, fixture-only Runner protocol, trusted-admin Docker Runner boundaries, local/internal Alpha deployment preparation, admin-only staging intake, administrator review/publish state controls, authorized user catalog and collections, private media/RSS backend flows, and privacy-safe request correlation IDs.
 
 ## Local development
 
@@ -82,6 +82,9 @@ corepack pnpm dev
 - `POST /admin/review/{reviewId}/reject` (admin only)
 - `GET /admin/programs` (admin only)
 - `GET /admin/programs/{programId}` (admin only)
+- `GET /admin/programs/{programId}/access-grants` (admin only)
+- `POST /admin/programs/{programId}/access-grants` (admin only)
+- `POST /admin/program-access/{grantId}/revoke` (admin only)
 - `PATCH /admin/programs/{programId}` (admin only)
 - `POST /admin/programs/{programId}/submit-review` (admin only)
 - `POST /admin/programs/{programId}/publish` (admin only)
@@ -91,6 +94,16 @@ corepack pnpm dev
 - `POST /admin/episodes/{episodeId}/submit-review` (admin only)
 - `POST /admin/episodes/{episodeId}/publish` (admin only)
 - `POST /admin/episodes/{episodeId}/archive` (admin only)
+- `GET /programs` (logged-in active user)
+- `GET /programs/{programId}` (logged-in active user with active grant)
+- `GET /programs/{programId}/episodes` (logged-in active user with active grant)
+- `GET /episodes/{episodeId}` (logged-in active user with active grant)
+- `GET /me/collections` (logged-in active user)
+- `POST /me/collections` (logged-in active user)
+- `PATCH /me/collections/{collectionId}` (owner only)
+- `DELETE /me/collections/{collectionId}` (owner only)
+- `POST /me/collections/{collectionId}/programs` (owner only, authorized Program only)
+- `DELETE /me/collections/{collectionId}/programs/{programId}` (owner only)
 
 ## M1.1A scope note
 

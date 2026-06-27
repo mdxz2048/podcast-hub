@@ -4,6 +4,17 @@ import type { StagingEpisode, StagingProgram } from "./staging";
 export type AdminProgram = StagingProgram;
 export type AdminEpisode = StagingEpisode;
 
+export interface ProgramAccessGrant {
+  id: string;
+  user_id: string;
+  program_id: string;
+  status: "active" | "revoked";
+  reason: string;
+  created_at: string;
+  updated_at: string;
+  revoked_at?: string;
+}
+
 export interface ReviewItem {
   id: string;
   target_type: "program" | "episode";
@@ -64,6 +75,26 @@ export async function publishEpisode(episodeId: string) {
 
 export async function archiveEpisode(episodeId: string) {
   return apiRequest<{ episode: AdminEpisode }>(`/admin/episodes/${encodeURIComponent(episodeId)}/archive`, { method: "POST", headers: csrfHeaders() });
+}
+
+export async function listProgramAccessGrants(programId: string) {
+  return apiRequest<{ grants: ProgramAccessGrant[] }>(`/admin/programs/${encodeURIComponent(programId)}/access-grants`);
+}
+
+export async function grantProgramAccess(programId: string, email: string, reason: string) {
+  return apiRequest<{ grant: ProgramAccessGrant }>(`/admin/programs/${encodeURIComponent(programId)}/access-grants`, {
+    method: "POST",
+    headers: csrfHeaders(),
+    body: JSON.stringify({ email, reason })
+  });
+}
+
+export async function revokeProgramAccess(grantId: string, reason: string) {
+  return apiRequest<{ grant: ProgramAccessGrant }>(`/admin/program-access/${encodeURIComponent(grantId)}/revoke`, {
+    method: "POST",
+    headers: csrfHeaders(),
+    body: JSON.stringify({ reason })
+  });
 }
 
 export async function listReviews() {

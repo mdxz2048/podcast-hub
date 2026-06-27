@@ -12,6 +12,16 @@ type Store interface {
 	GrantProgramAccess(ctx context.Context, grant ProgramAccessGrant, actorID string) (ProgramAccessGrant, error)
 	ListProgramAccessGrants(ctx context.Context, programID string) ([]ProgramAccessGrant, error)
 	RevokeProgramAccess(ctx context.Context, grantID string, actorID string, reason string, revokedAt time.Time) (ProgramAccessGrant, error)
+	ListAuthorizedPrograms(ctx context.Context, userID string) ([]UserProgram, error)
+	GetAuthorizedProgram(ctx context.Context, userID string, programID string) (UserProgram, bool, error)
+	ListAuthorizedEpisodes(ctx context.Context, userID string, programID string) ([]UserEpisode, error)
+	GetAuthorizedEpisode(ctx context.Context, userID string, episodeID string) (UserEpisode, bool, error)
+	ListUserCollections(ctx context.Context, userID string) ([]UserCollection, error)
+	CreateUserCollection(ctx context.Context, collection UserCollection) (UserCollection, error)
+	UpdateUserCollection(ctx context.Context, userID string, collectionID string, title *string, description *string, updatedAt time.Time) (UserCollection, error)
+	DeleteUserCollection(ctx context.Context, userID string, collectionID string) error
+	AddProgramToCollection(ctx context.Context, userID string, collectionID string, programID string, addedAt time.Time) error
+	RemoveProgramFromCollection(ctx context.Context, userID string, collectionID string, programID string) error
 	GetRSSFeed(ctx context.Context, feedID string) (RSSFeed, bool, error)
 	GetRSSFeedForUser(ctx context.Context, feedID string, userID string) (RSSFeed, bool, error)
 	ListRSSFeedsByUser(ctx context.Context, userID string) ([]RSSFeed, error)

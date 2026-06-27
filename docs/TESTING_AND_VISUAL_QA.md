@@ -179,6 +179,18 @@ Backend:
 - Source and Secret service tests cover approved Connector requirements, Alpha mode rejection, encrypted Secret storage, required Secret binding, and revoked Secret blocking.
 - Production config fails closed without `SECRETS_MASTER_KEY`.
 
+## M1.3C test focus
+
+Backend:
+
+- HTTP tests cover unauthenticated user catalog access, logged-in users without grants, authorized published Programs, published Episode/media filtering, revoke behavior, owner-scoped collections, unauthorized Program add rejection, and non-admin rejection for admin grant APIs.
+- Response assertions ensure storage keys, private paths, Secrets, tokens, and unauthorized titles are not leaked.
+
+Frontend:
+
+- Playwright tests mock real API contracts for user Program browse/detail, personal collection create/edit/remove, and admin Program access grant/revoke.
+- User pages must not read `src/mock/data` as a fallback for catalog or collection content.
+
 Frontend:
 
 - Admin Playwright tests cover Source empty state, Source creation from approved version, Secret metadata display, and absence of runtime/download controls.

@@ -57,6 +57,8 @@ Provides management UI for Programs, Sources, Connectors, Jobs, Reviews, Publica
 
 Provides registration, login, password reset, authorized Program browsing, personal collections, RSS URL management, and future account session management.
 
+M1.3C connects authorized Program browsing and personal collections to the API layer. User catalog reads are derived from `program_access_grants`, `programs`, `episodes`, and `media_assets`; they do not expose Source, Connector, ImportJob, Artifact, staging, storage key, Secret, or RSS token fields. Personal collection membership can retain a Program relationship after access is revoked, but read models filter it out through the same current-authorization query.
+
 ### 3.3 API Layer
 
 Owns all platform commands and queries. All UI actions go through the API layer, including:
@@ -71,6 +73,8 @@ Owns all platform commands and queries. All UI actions go through the API layer,
 - User access changes.
 
 The API layer assigns every request a server-generated opaque correlation ID before routing. Error responses may return this `request_id` so administrators can correlate a client report with logs, but the value must be random and non-semantic. It must not include hostnames, IP addresses, `.local` names, paths, user names, URLs, tokens, cookies, Secret material, database connection strings, or any caller-supplied `X-Request-Id`.
+
+User catalog and collection APIs are read-model endpoints over the publication boundary. They never create a second Program or Episode model and never let a user infer whether an unauthorized Program, Episode, Source, Connector, Job, Artifact, or media object exists.
 
 ### 3.4 Domain Service Layer
 

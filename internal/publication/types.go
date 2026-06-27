@@ -84,3 +84,35 @@ type FeedTokenResult struct {
 	Token   string  `json:"token"`
 	FeedURL string  `json:"feed_url"`
 }
+
+type UserProgram struct {
+	ID           string    `json:"id"`
+	Title        string    `json:"title"`
+	Description  string    `json:"description"`
+	Author       string    `json:"author"`
+	Language     string    `json:"language"`
+	Status       string    `json:"status"`
+	EpisodeCount int       `json:"episode_count"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+type UserEpisode struct {
+	ID              string    `json:"id"`
+	ProgramID       string    `json:"program_id"`
+	Title           string    `json:"title"`
+	Description     string    `json:"description"`
+	PublishedAt     time.Time `json:"published_at"`
+	DurationSeconds int       `json:"duration_seconds"`
+	Status          string    `json:"status"`
+	MediaStatus     string    `json:"media_status"`
+}
+
+type UserCollection struct {
+	ID          string        `json:"id"`
+	UserID      string        `json:"-"`
+	Title       string        `json:"title"`
+	Description string        `json:"description"`
+	Programs    []UserProgram `json:"programs"`
+	CreatedAt   time.Time     `json:"created_at"`
+	UpdatedAt   time.Time     `json:"updated_at"`
+}

@@ -159,3 +159,7 @@ or a raw 32-byte value managed by the deployment secret store. Never commit the 
 ## M1.3B environment additions
 
 M1.3B adds no new required environment variables. Review and publication state transitions use the existing PostgreSQL database and admin session/CSRF configuration.
+
+## M1.3C environment additions
+
+M1.3C adds no new required environment variables. User catalog and collection APIs use the existing PostgreSQL database, session cookie, CSRF cookie/header, and Program access-grant tables.

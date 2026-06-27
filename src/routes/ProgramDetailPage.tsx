@@ -1,37 +1,52 @@
 import { ArrowLeft, FolderPlus, Heart, Lock, Plus } from "lucide-react";
 import type { CSSProperties } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { addProgram, createCollection, listCollections } from "../api/collections";
+import type { UserCollectionView } from "../api/collections";
+import { getProgram, listProgramEpisodes } from "../api/programs";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { Drawer } from "../components/Drawer";
 import { EpisodeRow } from "../components/EpisodeRow";
 import { Input } from "../components/Form";
-import { EmptyState, ErrorState, PermissionDeniedState, SuccessFeedback } from "../components/StateBlocks";
-import { programs } from "../mock/data";
-import { useMockState } from "../mock/MockState";
-import { episodesForProgram, findProgram } from "../mock/selectors";
+import { EmptyState, ErrorState, LoadingState, PermissionDeniedState, SuccessFeedback } from "../components/StateBlocks";
+import type { Episode, Program } from "../types/domain";
 import { accessStateLabel, programStatusLabel, rightsStateLabel } from "../utils/labels";
 
 export function ProgramDetailPage() {
   const { programId } = useParams();
   const [params] = useSearchParams();
-  const program = findProgram(programId);
   const state = params.get("state");
   const drawerFromUrl = params.get("drawer") === "add";
-  const { collections, addProgramToCollection, createCollection, showToast } = useMockState();
+  const [program, setProgram] = useState<Program | null>(null);
+  const [programEpisodes, setProgramEpisodes] = useState<Episode[]>([]);
+  const [collections, setCollections] = useState<UserCollectionView[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(drawerFromUrl);
-  const [selectedCollectionId, setSelectedCollectionId] = useState(collections[0]?.id ?? "");
+  const [selectedCollectionId, setSelectedCollectionId] = useState("");
   const [newCollectionTitle, setNewCollectionTitle] = useState("");
   const [favorite, setFavorite] = useState(false);
 
-  const displayProgram = useMemo(() => {
-    if (state === "long") return programs.find((item) => item.id === "program_field_archive") ?? program;
-    return program;
-  }, [program, state]);
+  useEffect(() => {
+    if (!programId) return;
+    Promise.all([getProgram(programId), listProgramEpisodes(programId), listCollections()])
+      .then(([nextProgram, nextEpisodes, nextCollections]) => {
+        setProgram(nextProgram);
+        setProgramEpisodes(nextEpisodes);
+        setCollections(nextCollections);
+        setSelectedCollectionId(nextCollections[0]?.id ?? "");
+      })
+      .catch(() => setError("节目不存在或当前账号无权访问。"))
+      .finally(() => setLoading(false));
+  }, [programId]);
 
-  if (!displayProgram) return <ErrorState title="节目不存在" />;
-  const activeProgram = displayProgram;
+  if (loading) return <LoadingState title="正在加载节目" />;
+  if (error) return <ErrorState title={error} />;
+  if (!program) return <ErrorState title="节目不存在" />;
+  const activeProgram = program;
   if (state === "denied") return <PermissionDeniedState />;
   if (state === "unavailable") return <ErrorState title="节目暂不可用" />;
   if (activeProgram.accessState === "blocked") {
@@ -43,23 +58,30 @@ export function ProgramDetailPage() {
         <section className="rounded-lg border border-warning/30 bg-warning/5 p-8">
           <Lock className="mb-4 h-7 w-7 text-warning" />
           <h1 className="text-2xl font-semibold">访问受限</h1>
-          <p className="mt-2 text-secondary">当前账号没有访问「{activeProgram.title}」的权限，单集不会出现在你的 RSS 合集中。</p>
+          <p className="mt-2 text-secondary">当前账号没有访问该节目的权限，单集不会出现在你的目录或合集里。</p>
         </section>
       </div>
     );
   }
 
-  const programEpisodes = episodesForProgram(activeProgram.id);
-
-  function handleAdd() {
-    const targetId = newCollectionTitle.trim()
-      ? createCollection(newCollectionTitle, activeProgram.id).id
-      : selectedCollectionId;
-    if (targetId) {
-      addProgramToCollection(targetId, activeProgram.id);
-      showToast({ tone: "success", title: "已加入合集", message: `「${activeProgram.title}」已加入选中的模拟合集。` });
+  async function handleAdd() {
+    try {
+      const target = newCollectionTitle.trim()
+        ? await createCollection({ title: newCollectionTitle, description: "" })
+        : collections.find((collection) => collection.id === selectedCollectionId);
+      if (target) {
+        const updated = await addProgram(target.id, activeProgram.id);
+        const nextCollections = collections.some((item) => item.id === updated.id)
+          ? collections.map((item) => item.id === updated.id ? updated : item)
+          : [updated, ...collections];
+        setCollections(nextCollections);
+        setSelectedCollectionId(updated.id);
+        setSuccess("节目已加入合集。");
+      }
       setDrawerOpen(false);
       setNewCollectionTitle("");
+    } catch {
+      setError("合集更新失败或当前账号无权加入该节目。");
     }
   }
 
@@ -96,10 +118,11 @@ export function ProgramDetailPage() {
           </div>
         </div>
       </section>
-      {favorite ? <SuccessFeedback message="收藏状态已更新到本地内存，刷新后会恢复初始状态。" /> : null}
+      {favorite ? <SuccessFeedback message="收藏状态已更新。" /> : null}
+      {success ? <SuccessFeedback message={success} /> : null}
       <section className="rounded-lg border border-success/20 bg-success/10 p-4 text-sm text-primary">
         <p className="font-semibold">授权后可播放</p>
-        <p className="mt-1 text-secondary">真实版本会在已登录、节目授权有效且单集已发布时提供私有播放能力。当前原型不会显示真实媒体链接，也不会提供下载按钮。</p>
+        <p className="mt-1 text-secondary">当前账号有权访问该节目。页面只展示已发布且带已发布媒体的单集，不显示存储地址或下载入口。</p>
       </section>
       <section>
         <h2 className="mb-4 text-xl font-semibold">最近单集</h2>
@@ -111,7 +134,7 @@ export function ProgramDetailPage() {
       </section>
       <Drawer open={drawerOpen} title="加入合集" onClose={() => setDrawerOpen(false)}>
         <div className="grid gap-5">
-          <p className="text-sm text-secondary">选择一个已有合集，或创建新合集。操作只更新当前前端内存状态。</p>
+          <p className="text-sm text-secondary">选择一个已有合集，或创建新合集。</p>
           <div className="grid gap-3">
             {collections.map((collection) => (
               <label key={collection.id} className="flex items-start gap-3 rounded-lg border border-border p-4">

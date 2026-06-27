@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Archive, CheckCircle2, Save } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import type { ApiError } from "../api/client";
-import { archiveProgram, getAdminProgram, patchAdminProgram, publishProgram, submitProgramReview } from "../api/adminContent";
-import type { AdminEpisode, AdminProgram } from "../api/adminContent";
+import { archiveProgram, getAdminProgram, grantProgramAccess, listProgramAccessGrants, patchAdminProgram, publishProgram, revokeProgramAccess, submitProgramReview } from "../api/adminContent";
+import type { AdminEpisode, AdminProgram, ProgramAccessGrant } from "../api/adminContent";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { Input } from "../components/Form";
@@ -16,6 +16,9 @@ export function AdminProgramDetailPage() {
   const [episodes, setEpisodes] = useState<AdminEpisode[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [grants, setGrants] = useState<ProgramAccessGrant[]>([]);
+  const [grantEmail, setGrantEmail] = useState("");
+  const [grantReason, setGrantReason] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +30,8 @@ export function AdminProgramDetailPage() {
     setEpisodes(result.episodes);
     setTitle(result.program.title);
     setDescription(result.program.description);
+    const grantResult = await listProgramAccessGrants(programId);
+    setGrants(grantResult.grants);
   }
 
   useEffect(() => {
@@ -40,6 +45,36 @@ export function AdminProgramDetailPage() {
       const result = await action();
       if (result.program) setProgram(result.program);
       setSuccess(message);
+    } catch (err) {
+      setError((err as ApiError).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function addGrant() {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await grantProgramAccess(programId, grantEmail, grantReason);
+      setGrants((current) => [result.grant, ...current.filter((item) => item.id !== result.grant.id)]);
+      setGrantEmail("");
+      setGrantReason("");
+      setSuccess("授权已写入。");
+    } catch (err) {
+      setError((err as ApiError).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function revokeGrant(grantId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await revokeProgramAccess(grantId, "admin revoked");
+      setGrants((current) => current.map((item) => item.id === grantId ? result.grant : item));
+      setSuccess("授权已撤销。");
     } catch (err) {
       setError((err as ApiError).message);
     } finally {
@@ -104,6 +139,33 @@ export function AdminProgramDetailPage() {
                   <Badge tone={episode.status === "published" ? "success" : "warning"}>{episode.status}</Badge>
                 </div>
               </Link>
+            ))}
+          </div>
+        )}
+      </section>
+      <section className="rounded-lg border border-border bg-surface p-5">
+        <h2 className="text-lg font-semibold">用户授权</h2>
+        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+          <Input label="用户邮箱" value={grantEmail} onChange={(event) => setGrantEmail(event.target.value)} />
+          <Input label="授权原因" value={grantReason} onChange={(event) => setGrantReason(event.target.value)} />
+          <Button className="self-end" disabled={busy || !grantEmail.trim()} onClick={addGrant}>授予访问</Button>
+        </div>
+        {grants.length === 0 ? <EmptyState title="暂无授权用户" /> : (
+          <div className="mt-4 grid gap-3">
+            {grants.map((grant) => (
+              <article key={grant.id} className="rounded-md border border-border p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <h3 className="font-semibold">User {grant.user_id.slice(0, 8)}</h3>
+                    <p className="mt-1 text-sm text-secondary">{grant.reason || "no reason recorded"}</p>
+                    <p className="mt-1 text-xs text-muted">Created {formatDate(grant.created_at)}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone={grant.status === "active" ? "success" : "danger"}>{grant.status}</Badge>
+                    <Button variant="danger" disabled={busy || grant.status !== "active"} onClick={() => revokeGrant(grant.id)}>撤销</Button>
+                  </div>
+                </div>
+              </article>
             ))}
           </div>
         )}

@@ -63,6 +63,105 @@ func (s *Service) RevokeProgramAccess(ctx context.Context, grantID string, actor
 	return grant, nil
 }
 
+func (s *Service) ListAuthorizedPrograms(ctx context.Context, userID string) ([]UserProgram, error) {
+	return s.store.ListAuthorizedPrograms(ctx, userID)
+}
+
+func (s *Service) GetAuthorizedProgram(ctx context.Context, userID string, programID string) (UserProgram, error) {
+	program, found, err := s.store.GetAuthorizedProgram(ctx, userID, programID)
+	if err != nil {
+		return UserProgram{}, err
+	}
+	if !found {
+		return UserProgram{}, ErrProgramNotAvailable
+	}
+	return program, nil
+}
+
+func (s *Service) ListAuthorizedEpisodes(ctx context.Context, userID string, programID string) ([]UserEpisode, error) {
+	if _, err := s.GetAuthorizedProgram(ctx, userID, programID); err != nil {
+		return nil, err
+	}
+	return s.store.ListAuthorizedEpisodes(ctx, userID, programID)
+}
+
+func (s *Service) GetAuthorizedEpisode(ctx context.Context, userID string, episodeID string) (UserEpisode, error) {
+	episode, found, err := s.store.GetAuthorizedEpisode(ctx, userID, episodeID)
+	if err != nil {
+		return UserEpisode{}, err
+	}
+	if !found {
+		return UserEpisode{}, ErrProgramNotAvailable
+	}
+	return episode, nil
+}
+
+func (s *Service) ListUserCollections(ctx context.Context, userID string) ([]UserCollection, error) {
+	return s.store.ListUserCollections(ctx, userID)
+}
+
+func (s *Service) CreateUserCollection(ctx context.Context, userID string, title string, description string) (UserCollection, error) {
+	title = strings.TrimSpace(title)
+	description = strings.TrimSpace(description)
+	if title == "" || len([]rune(title)) > 120 || len([]rune(description)) > 1000 {
+		return UserCollection{}, ErrInvalidCollection
+	}
+	now := time.Now()
+	return s.store.CreateUserCollection(ctx, UserCollection{ID: uuid.NewString(), UserID: userID, Title: title, Description: description, CreatedAt: now, UpdatedAt: now})
+}
+
+func (s *Service) UpdateUserCollection(ctx context.Context, userID string, collectionID string, title *string, description *string) (UserCollection, error) {
+	if title != nil {
+		next := strings.TrimSpace(*title)
+		if next == "" || len([]rune(next)) > 120 {
+			return UserCollection{}, ErrInvalidCollection
+		}
+		*title = next
+	}
+	if description != nil {
+		next := strings.TrimSpace(*description)
+		if len([]rune(next)) > 1000 {
+			return UserCollection{}, ErrInvalidCollection
+		}
+		*description = next
+	}
+	return s.store.UpdateUserCollection(ctx, userID, collectionID, title, description, time.Now())
+}
+
+func (s *Service) DeleteUserCollection(ctx context.Context, userID string, collectionID string) error {
+	return s.store.DeleteUserCollection(ctx, userID, collectionID)
+}
+
+func (s *Service) AddProgramToCollection(ctx context.Context, userID string, collectionID string, programID string) (UserCollection, error) {
+	if _, err := s.GetAuthorizedProgram(ctx, userID, programID); err != nil {
+		return UserCollection{}, err
+	}
+	if err := s.store.AddProgramToCollection(ctx, userID, collectionID, programID, time.Now()); err != nil {
+		return UserCollection{}, err
+	}
+	return s.getUserCollection(ctx, userID, collectionID)
+}
+
+func (s *Service) RemoveProgramFromCollection(ctx context.Context, userID string, collectionID string, programID string) (UserCollection, error) {
+	if err := s.store.RemoveProgramFromCollection(ctx, userID, collectionID, programID); err != nil {
+		return UserCollection{}, err
+	}
+	return s.getUserCollection(ctx, userID, collectionID)
+}
+
+func (s *Service) getUserCollection(ctx context.Context, userID string, collectionID string) (UserCollection, error) {
+	collections, err := s.store.ListUserCollections(ctx, userID)
+	if err != nil {
+		return UserCollection{}, err
+	}
+	for _, collection := range collections {
+		if collection.ID == collectionID {
+			return collection, nil
+		}
+	}
+	return UserCollection{}, ErrCollectionNotFound
+}
+
 func (s *Service) ListUserFeeds(ctx context.Context, userID string) ([]RSSFeed, error) {
 	return s.store.ListRSSFeedsByUser(ctx, userID)
 }

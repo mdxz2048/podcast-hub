@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -37,6 +38,115 @@ func TestUserMediaRequiresAuthorization(t *testing.T) {
 		t.Fatalf("expected 404 for unauthorized access, got %d", rec.Code)
 	}
 	assertNoSensitiveLeak(t, rec.Body.String())
+}
+
+func TestUserCatalogAndCollectionsRequireCurrentAuthorization(t *testing.T) {
+	server, state := newPublicationTestServer(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/programs", nil)
+	rec := httptest.NewRecorder()
+	server.Router().ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected unauthenticated catalog 401, got %d", rec.Code)
+	}
+
+	state.sessionUser = state.users["user-2"]
+	req = authedRequest(http.MethodGet, "/programs", nil)
+	rec = httptest.NewRecorder()
+	server.Router().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected empty authorized catalog 200, got %d", rec.Code)
+	}
+	if strings.Contains(rec.Body.String(), "Program Title") {
+		t.Fatalf("unauthorized catalog leaked program title: %s", rec.Body.String())
+	}
+
+	state.sessionUser = state.users["user-1"]
+	req = authedRequest(http.MethodGet, "/programs", nil)
+	rec = httptest.NewRecorder()
+	server.Router().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Program Title") {
+		t.Fatalf("expected authorized program, code=%d body=%s", rec.Code, rec.Body.String())
+	}
+	assertNoSensitiveLeak(t, rec.Body.String())
+
+	req = authedRequest(http.MethodGet, "/programs/program-1/episodes", nil)
+	rec = httptest.NewRecorder()
+	server.Router().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected episodes 200, got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "Hello") || strings.Contains(body, "Draft Episode") {
+		t.Fatalf("published episode filtering failed: %s", body)
+	}
+
+	req = authedRequest(http.MethodGet, "/episodes/episode-1", nil)
+	rec = httptest.NewRecorder()
+	server.Router().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Hello") {
+		t.Fatalf("expected authorized episode detail, code=%d body=%s", rec.Code, rec.Body.String())
+	}
+
+	req = authedRequest(http.MethodGet, "/programs/program-2", nil)
+	rec = httptest.NewRecorder()
+	server.Router().ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected unauthorized program 404, got %d", rec.Code)
+	}
+	if strings.Contains(rec.Body.String(), "Hidden Program") {
+		t.Fatalf("unauthorized detail leaked hidden title: %s", rec.Body.String())
+	}
+
+	createReq := csrfRequest(http.MethodPost, "/me/collections", `{"title":"Commute","description":"Daily listening"}`)
+	createRec := httptest.NewRecorder()
+	server.Router().ServeHTTP(createRec, createReq)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("expected collection create 201, got %d body=%s", createRec.Code, createRec.Body.String())
+	}
+	var createBody struct {
+		Collection publication.UserCollection `json:"collection"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &createBody); err != nil {
+		t.Fatalf("decode collection: %v", err)
+	}
+
+	addReq := csrfRequest(http.MethodPost, "/me/collections/"+createBody.Collection.ID+"/programs", `{"program_id":"program-1"}`)
+	addRec := httptest.NewRecorder()
+	server.Router().ServeHTTP(addRec, addReq)
+	if addRec.Code != http.StatusOK || !strings.Contains(addRec.Body.String(), "Program Title") {
+		t.Fatalf("expected add authorized program, code=%d body=%s", addRec.Code, addRec.Body.String())
+	}
+
+	state.revokeGrant("grant-1")
+	listReq := authedRequest(http.MethodGet, "/me/collections", nil)
+	listRec := httptest.NewRecorder()
+	server.Router().ServeHTTP(listRec, listReq)
+	if listRec.Code != http.StatusOK {
+		t.Fatalf("expected collections 200 after revoke, got %d", listRec.Code)
+	}
+	if strings.Contains(listRec.Body.String(), "Program Title") {
+		t.Fatalf("revoked collection leaked historical program title: %s", listRec.Body.String())
+	}
+
+	addReq = csrfRequest(http.MethodPost, "/me/collections/"+createBody.Collection.ID+"/programs", `{"program_id":"program-1"}`)
+	addRec = httptest.NewRecorder()
+	server.Router().ServeHTTP(addRec, addReq)
+	if addRec.Code != http.StatusNotFound {
+		t.Fatalf("expected revoked program add 404, got %d", addRec.Code)
+	}
+}
+
+func TestUserCannotCallAdminAccessGrantAPI(t *testing.T) {
+	server, state := newPublicationTestServer(t)
+	state.sessionUser = state.users["user-1"]
+
+	req := csrfRequest(http.MethodPost, "/admin/programs/program-1/access-grants", `{"email":"other@example.invalid"}`)
+	rec := httptest.NewRecorder()
+	server.Router().ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected non-admin grant API 403, got %d", rec.Code)
+	}
 }
 
 func TestUserMediaSupportsHeadRangeETagAndRevocation(t *testing.T) {
@@ -279,6 +389,10 @@ type publicationTestState struct {
 	users          map[string]auth.User
 	sessionUser    auth.User
 	grants         map[string]publication.ProgramAccessGrant
+	programs       map[string]publication.UserProgram
+	episodes       map[string]publication.UserEpisode
+	collections    map[string]publication.UserCollection
+	collectionRefs map[string][]string
 	feeds          map[string]publication.RSSFeed
 	feedByToken    map[string]publication.RSSFeed
 	feedEpisodes   map[string][]publication.FeedEpisode
@@ -310,6 +424,16 @@ func newPublicationTestServer(t *testing.T) (*Server, *publicationTestState) {
 		grants: map[string]publication.ProgramAccessGrant{
 			"grant-1": {ID: "grant-1", UserID: "user-1", ProgramID: "program-1", Status: publication.ProgramAccessActive, CreatedAt: time.Now(), UpdatedAt: time.Now()},
 		},
+		programs: map[string]publication.UserProgram{
+			"program-1": {ID: "program-1", Title: "Program Title", Description: "Program description", Author: "Author Name", Language: "zh-CN", Status: "published", EpisodeCount: 1, UpdatedAt: time.Now()},
+			"program-2": {ID: "program-2", Title: "Hidden Program", Description: "Hidden description", Author: "Hidden", Language: "zh-CN", Status: "published", EpisodeCount: 1, UpdatedAt: time.Now()},
+		},
+		episodes: map[string]publication.UserEpisode{
+			"episode-1":     {ID: "episode-1", ProgramID: "program-1", Title: "Hello & Goodbye", Description: "Episode description", PublishedAt: time.Now().Add(-time.Hour), DurationSeconds: 120, Status: "published", MediaStatus: "published"},
+			"episode-draft": {ID: "episode-draft", ProgramID: "program-1", Title: "Draft Episode", Description: "Should stay hidden", PublishedAt: time.Now().Add(-time.Hour), DurationSeconds: 60, Status: "review_pending", MediaStatus: "staged"},
+		},
+		collections:    map[string]publication.UserCollection{},
+		collectionRefs: map[string][]string{},
 		feeds: map[string]publication.RSSFeed{
 			"feed-1": {ID: "feed-1", UserID: "user-1", Name: "My Feed", TokenPrefix: "token-ac", Status: publication.FeedStatusActive, CreatedAt: time.Now()},
 		},
@@ -373,6 +497,120 @@ func (s *publicationTestState) RevokeProgramAccess(_ context.Context, grantID st
 	item.UpdatedAt = revokedAt
 	s.grants[grantID] = item
 	return item, nil
+}
+
+func (s *publicationTestState) ListAuthorizedPrograms(_ context.Context, userID string) ([]publication.UserProgram, error) {
+	items := []publication.UserProgram{}
+	for _, program := range s.programs {
+		if program.Status == "published" && s.hasActiveGrant(userID, program.ID) {
+			items = append(items, program)
+		}
+	}
+	return items, nil
+}
+
+func (s *publicationTestState) GetAuthorizedProgram(_ context.Context, userID string, programID string) (publication.UserProgram, bool, error) {
+	program, ok := s.programs[programID]
+	if !ok || program.Status != "published" || !s.hasActiveGrant(userID, programID) {
+		return publication.UserProgram{}, false, nil
+	}
+	return program, true, nil
+}
+
+func (s *publicationTestState) ListAuthorizedEpisodes(_ context.Context, userID string, programID string) ([]publication.UserEpisode, error) {
+	items := []publication.UserEpisode{}
+	for _, episode := range s.episodes {
+		if episode.ProgramID == programID && episode.Status == "published" && episode.MediaStatus == "published" && s.hasActiveGrant(userID, programID) {
+			items = append(items, episode)
+		}
+	}
+	return items, nil
+}
+
+func (s *publicationTestState) GetAuthorizedEpisode(_ context.Context, userID string, episodeID string) (publication.UserEpisode, bool, error) {
+	episode, ok := s.episodes[episodeID]
+	if !ok || episode.Status != "published" || episode.MediaStatus != "published" || !s.hasActiveGrant(userID, episode.ProgramID) {
+		return publication.UserEpisode{}, false, nil
+	}
+	return episode, true, nil
+}
+
+func (s *publicationTestState) ListUserCollections(_ context.Context, userID string) ([]publication.UserCollection, error) {
+	items := []publication.UserCollection{}
+	for _, collection := range s.collections {
+		if collection.UserID != userID {
+			continue
+		}
+		next := collection
+		next.Programs = []publication.UserProgram{}
+		for _, programID := range s.collectionRefs[collection.ID] {
+			if program, ok := s.programs[programID]; ok && program.Status == "published" && s.hasActiveGrant(userID, programID) {
+				next.Programs = append(next.Programs, program)
+			}
+		}
+		items = append(items, next)
+	}
+	return items, nil
+}
+
+func (s *publicationTestState) CreateUserCollection(_ context.Context, collection publication.UserCollection) (publication.UserCollection, error) {
+	s.collections[collection.ID] = collection
+	return collection, nil
+}
+
+func (s *publicationTestState) UpdateUserCollection(_ context.Context, userID string, collectionID string, title *string, description *string, updatedAt time.Time) (publication.UserCollection, error) {
+	collection, ok := s.collections[collectionID]
+	if !ok || collection.UserID != userID {
+		return publication.UserCollection{}, publication.ErrCollectionNotFound
+	}
+	if title != nil {
+		collection.Title = *title
+	}
+	if description != nil {
+		collection.Description = *description
+	}
+	collection.UpdatedAt = updatedAt
+	s.collections[collectionID] = collection
+	return collection, nil
+}
+
+func (s *publicationTestState) DeleteUserCollection(_ context.Context, userID string, collectionID string) error {
+	collection, ok := s.collections[collectionID]
+	if !ok || collection.UserID != userID {
+		return publication.ErrCollectionNotFound
+	}
+	delete(s.collections, collectionID)
+	delete(s.collectionRefs, collectionID)
+	return nil
+}
+
+func (s *publicationTestState) AddProgramToCollection(_ context.Context, userID string, collectionID string, programID string, _ time.Time) error {
+	collection, ok := s.collections[collectionID]
+	if !ok || collection.UserID != userID {
+		return publication.ErrCollectionNotFound
+	}
+	for _, existing := range s.collectionRefs[collectionID] {
+		if existing == programID {
+			return nil
+		}
+	}
+	s.collectionRefs[collectionID] = append(s.collectionRefs[collectionID], programID)
+	return nil
+}
+
+func (s *publicationTestState) RemoveProgramFromCollection(_ context.Context, userID string, collectionID string, programID string) error {
+	collection, ok := s.collections[collectionID]
+	if !ok || collection.UserID != userID {
+		return publication.ErrCollectionNotFound
+	}
+	next := []string{}
+	for _, existing := range s.collectionRefs[collectionID] {
+		if existing != programID {
+			next = append(next, existing)
+		}
+	}
+	s.collectionRefs[collectionID] = next
+	return nil
 }
 
 func (s *publicationTestState) GetRSSFeed(_ context.Context, feedID string) (publication.RSSFeed, bool, error) {
@@ -556,4 +794,19 @@ func assertNoSensitiveLeak(t *testing.T, body string) {
 			t.Fatalf("response leaked %q: %s", forbidden, body)
 		}
 	}
+}
+
+func authedRequest(method string, target string, body io.Reader) *http.Request {
+	req := httptest.NewRequest(method, target, body)
+	req.AddCookie(&http.Cookie{Name: "podcast_hub_session", Value: "user-token"})
+	return req
+}
+
+func csrfRequest(method string, target string, body string) *http.Request {
+	req := authedRequest(method, target, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Origin", "http://127.0.0.1:5173")
+	req.Header.Set("X-CSRF-Token", "csrf-token")
+	req.AddCookie(&http.Cookie{Name: "podcast_hub_csrf", Value: "csrf-token"})
+	return req
 }

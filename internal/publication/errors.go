@@ -12,4 +12,7 @@ var (
 	ErrMediaNotAvailable     = errors.New("media_not_available")
 	ErrUserNotEligible       = errors.New("user_not_eligible")
 	ErrInvalidFeedName       = errors.New("invalid_feed_name")
+	ErrCollectionNotFound    = errors.New("collection_not_found")
+	ErrProgramNotAvailable   = errors.New("program_not_available")
+	ErrInvalidCollection     = errors.New("invalid_collection")
 )

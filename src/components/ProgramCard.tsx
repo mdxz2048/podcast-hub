@@ -32,7 +32,7 @@ export function ProgramCard({ program }: { program: Program }) {
         </div>
         <div className="flex flex-wrap gap-2 text-xs text-muted">
           <span>{program.episodeCount} 个单集</span>
-          <span>{program.sourceCount} 个来源</span>
+          <span>{program.language}</span>
           <span>{publicationStateLabel[program.publicationState]}</span>
           <span>更新于 {program.lastUpdated}</span>
         </div>

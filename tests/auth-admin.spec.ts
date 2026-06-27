@@ -83,6 +83,7 @@ async function mockConnectorAdminApi(page: Page) {
     { id: "review-program", target_type: "program", target_id: "program-1", review_kind: "metadata", status: "pending", review_note: "", created_at: "2026-01-01T00:10:00Z" },
     { id: "review-episode", target_type: "episode", target_id: "episode-1", review_kind: "metadata", status: "pending", review_note: "", created_at: "2026-01-01T00:10:00Z" }
   ];
+  let grants = [{ id: "grant-1", user_id: "user-1", program_id: "program-1", status: "active", reason: "beta", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" }];
   await page.route("http://127.0.0.1:8080/admin/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -217,6 +218,26 @@ async function mockConnectorAdminApi(page: Page) {
     }
     if (request.method() === "GET" && url.pathname.endsWith("/admin/programs/program-1")) {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ program: adminProgram, episodes: [adminEpisode] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/programs/program-1/access-grants")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ grants }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/programs/program-1/access-grants")) {
+      const body = JSON.parse(request.postData() ?? "{}") as { email?: string; reason?: string };
+      if (!body.email?.includes("@")) {
+        await route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: { code: "user_not_eligible", message: "User is not eligible for access." } }) });
+        return;
+      }
+      const grant = { id: "grant-2", user_id: "user-2", program_id: "program-1", status: "active", reason: body.reason ?? "", created_at: "2026-01-01T00:30:00Z", updated_at: "2026-01-01T00:30:00Z" };
+      grants = [grant, ...grants];
+      await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ grant }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/program-access/grant-1/revoke")) {
+      grants = grants.map((grant) => grant.id === "grant-1" ? { ...grant, status: "revoked", revoked_at: "2026-01-01T00:31:00Z" } : grant);
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ grant: grants.find((grant) => grant.id === "grant-1") }) });
       return;
     }
     if (request.method() === "PATCH" && url.pathname.endsWith("/admin/programs/program-1")) {
@@ -371,6 +392,63 @@ async function mockConnectorAdminApi(page: Page) {
   });
 }
 
+async function mockUserCatalogApi(page: Page) {
+  const program = { id: "program-1", title: "Program Title", description: "Authorized program", author: "Author", language: "zh-CN", status: "published", episode_count: 1, updated_at: "2026-01-01T00:00:00Z" };
+  const episode = { id: "episode-1", program_id: "program-1", title: "Hello Episode", description: "Published episode", published_at: "2026-01-01T00:00:00Z", duration_seconds: 120, status: "published", media_status: "published" };
+  let collections = [{ id: "collection-1", title: "Commute", description: "Daily", programs: [program], created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" }];
+  await page.route("http://127.0.0.1:8080/programs**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "GET" && url.pathname === "/programs") {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ programs: [program] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname === "/programs/program-1") {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ program }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname === "/programs/program-1/episodes") {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ episodes: [episode] }) });
+      return;
+    }
+    await route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ error: { code: "resource_not_found", message: "Resource not found." } }) });
+  });
+  await page.route("http://127.0.0.1:8080/episodes/**", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ episode }) });
+  });
+  await page.route("http://127.0.0.1:8080/me/collections**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "GET" && url.pathname === "/me/collections") {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ collections }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname === "/me/collections") {
+      const body = JSON.parse(request.postData() ?? "{}") as { title?: string; description?: string };
+      const collection = { id: "collection-2", title: body.title ?? "New", description: body.description ?? "", programs: [], created_at: "2026-01-01T00:10:00Z", updated_at: "2026-01-01T00:10:00Z" };
+      collections = [collection, ...collections];
+      await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ collection }) });
+      return;
+    }
+    if (request.method() === "PATCH" && url.pathname === "/me/collections/collection-1") {
+      const body = JSON.parse(request.postData() ?? "{}") as { title?: string; description?: string };
+      collections = collections.map((collection) => collection.id === "collection-1" ? { ...collection, title: body.title ?? collection.title, description: body.description ?? collection.description } : collection);
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ collection: collections.find((collection) => collection.id === "collection-1") }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname === "/me/collections/collection-1/programs") {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ collection: collections[0] }) });
+      return;
+    }
+    if (request.method() === "DELETE" && url.pathname === "/me/collections/collection-1/programs/program-1") {
+      collections = collections.map((collection) => collection.id === "collection-1" ? { ...collection, programs: [] } : collection);
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ collection: collections.find((collection) => collection.id === "collection-1") }) });
+      return;
+    }
+    await route.fulfill({ status: 404, body: "not mocked" });
+  });
+}
+
 test("admin login redirects to /admin", async ({ page }) => {
   await mockAuthApi(page);
   await page.goto("/login");
@@ -422,6 +500,41 @@ test("auth state is not persisted in local/session storage", async ({ page }) =>
   }));
   expect(storageCounts.local).toBe(0);
   expect(storageCounts.session).toBe(0);
+});
+
+test("user catalog and program detail use real API data", async ({ page }) => {
+  await mockAuthApi(page, buildUser("user"));
+  await mockUserCatalogApi(page);
+
+  await page.goto("/programs");
+  await expect(page.getByText("Program Title")).toBeVisible();
+  await expect(page.getByText("Source")).toHaveCount(0);
+  await expect(page.getByText("Import Job")).toHaveCount(0);
+
+  await page.goto("/programs/program-1");
+  await expect(page.getByRole("heading", { name: "Program Title" })).toBeVisible();
+  await expect(page.getByText("Hello Episode")).toBeVisible();
+  await expect(page.getByRole("button", { name: "下载" })).toHaveCount(0);
+});
+
+test("user collections create edit and remove authorized programs", async ({ page }) => {
+  await mockAuthApi(page, buildUser("user"));
+  await mockUserCatalogApi(page);
+
+  await page.goto("/collections");
+  await expect(page.getByText("Commute")).toBeVisible();
+  await page.getByLabel("新建合集").fill("Focus");
+  await page.getByRole("button", { name: "创建合集" }).click();
+  await expect(page.getByText("新建合集已保存。")).toBeVisible();
+
+  await page.goto("/collections/collection-1");
+  await expect(page.getByText("Program Title")).toBeVisible();
+  await page.getByLabel("合集名称").fill("Commute Updated");
+  await page.getByRole("button", { name: "保存" }).click();
+  await expect(page.getByText("合集设置已保存。")).toBeVisible();
+  await page.getByRole("button", { name: "移除" }).click();
+  await expect(page.getByText("合集里还没有节目")).toBeVisible();
+  await expect(page.getByText("storage_key")).toHaveCount(0);
 });
 
 test("admin connectors list shows empty state", async ({ page }) => {
@@ -595,6 +708,22 @@ test("admin review workflow enforces reason and publish preconditions", async ({
   await expect(page.getByText("Program 已发布。")).toBeVisible();
   await expect(page.getByText("RSS")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "下载媒体" })).toHaveCount(0);
+});
+
+test("admin can grant and revoke program access through real API contract", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+
+  await page.goto("/admin/programs/program-1");
+  await expect(page.getByText("用户授权")).toBeVisible();
+  await expect(page.getByText("User user-1")).toBeVisible();
+  await page.getByLabel("用户邮箱").fill("other@example.invalid");
+  await page.getByLabel("授权原因").fill("beta");
+  await page.getByRole("button", { name: "授予访问" }).click();
+  await expect(page.getByText("授权已写入。")).toBeVisible();
+  await page.locator("article").filter({ hasText: "User user-1" }).getByRole("button", { name: "撤销" }).click();
+  await expect(page.getByText("授权已撤销。")).toBeVisible();
+  await expect(page.getByText("token")).toHaveCount(0);
 });
 
 test("admin episode review publish and archive use real API", async ({ page }) => {

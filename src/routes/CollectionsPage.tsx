@@ -1,30 +1,43 @@
 import { Plus, Radio } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { createCollection, listCollections } from "../api/collections";
+import type { UserCollectionView } from "../api/collections";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { Input } from "../components/Form";
 import { EmptyState, ErrorState, LoadingState, PermissionDeniedState, SuccessFeedback } from "../components/StateBlocks";
-import { useMockState } from "../mock/MockState";
 import { useViewState } from "./state";
 
 export function CollectionsPage() {
   const state = useViewState();
-  const { collections, createCollection, showToast } = useMockState();
+  const [collections, setCollections] = useState<UserCollectionView[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [title, setTitle] = useState("");
   const [created, setCreated] = useState(false);
 
-  if (state === "loading") return <LoadingState title="正在加载我的合集" />;
-  if (state === "error") return <ErrorState title="合集列表暂不可用" />;
+  useEffect(() => {
+    listCollections()
+      .then((items) => {
+        setCollections(items);
+        setError(false);
+      })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || state === "loading") return <LoadingState title="正在加载我的合集" />;
+  if (error || state === "error") return <ErrorState title="合集列表暂不可用" />;
   if (state === "denied") return <PermissionDeniedState />;
 
-  const visibleCollections = state === "empty" ? [] : collections;
+  const visibleCollections = collections;
 
-  function handleCreate() {
-    const collection = createCollection(title || "新的合集");
+  async function handleCreate() {
+    const collection = await createCollection({ title: title || "新的合集", description: "" });
+    setCollections((current) => [collection, ...current]);
     setTitle("");
     setCreated(true);
-    showToast({ tone: "success", title: "合集已创建", message: `「${collection.title}」已加入本地模拟列表。` });
   }
 
   return (
@@ -33,13 +46,13 @@ export function CollectionsPage() {
         <div>
           <p className="mb-2 text-xs font-semibold uppercase text-muted">我的合集</p>
           <h1 className="text-3xl font-semibold leading-tight md:text-4xl">管理个人 RSS 合集</h1>
-          <p className="mt-3 max-w-2xl text-secondary">把多个已授权节目组合成一个模拟订阅源，方便在外部播客客户端中统一订阅。</p>
+          <p className="mt-3 max-w-2xl text-secondary">把多个已授权节目组合成个人合集，后续可用于整理收听路径。</p>
         </div>
         <Link to="/programs">
           <Button variant="secondary">浏览节目</Button>
         </Link>
       </header>
-      {created ? <SuccessFeedback message="新建合集只保存在当前前端内存中。" /> : null}
+      {created ? <SuccessFeedback message="新建合集已保存。" /> : null}
       <section className="grid gap-3 rounded-lg border border-border bg-surface p-4 md:grid-cols-[1fr_auto]">
         <Input label="新建合集" placeholder="例如：每日通勤" value={title} onChange={(event) => setTitle(event.target.value)} />
         <Button className="self-end" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>创建合集</Button>

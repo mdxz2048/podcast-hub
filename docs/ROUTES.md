@@ -21,10 +21,10 @@ Account and admin identity routes are connected to real backend APIs. Connector 
 
 | Route | Page | M0 Phase | Notes |
 | --- | --- | --- | --- |
-| `/programs` | Program browse | M0.1 | Static Mock authorized Programs. |
-| `/programs/:programId` | Program detail | M0.2 | Static Program and episode preview. |
-| `/collections` | My Collections | M0.2 | Static collection list. |
-| `/collections/:collectionId` | Collection detail/editor | M0.2 | Static editor and RSS state. |
+| `/programs` | Program browse | M1.3C | Real authorized Program API; no mock fallback. |
+| `/programs/:programId` | Program detail | M1.3C | Real authorized Program and published Episode API. |
+| `/collections` | My Collections | M1.3C | Real owner-scoped personal collections. |
+| `/collections/:collectionId` | Collection detail/editor | M1.3C | Real collection edit, add, and remove Program API. |
 | `/collections/:collectionId/subscribe` | Collection RSS subscription | M0.2A | Static simulated RSS URL using example.invalid; no RSS XML generation. |
 | `/rss` | RSS feeds | M0.2 | Static token state only. |
 | `/account` | Account | M0.2 | Static account overview. |
@@ -143,6 +143,27 @@ Additional real admin review and publication APIs in M1.3B:
 - `POST /admin/episodes/{episodeId}/archive`
 
 M1.3B still does not expose published content to normal users. User catalog and access grants are deferred to M1.3C.
+
+M1.3C user catalog APIs:
+
+- `GET /programs`
+- `GET /programs/{programId}`
+- `GET /programs/{programId}/episodes`
+- `GET /episodes/{episodeId}`
+- `GET /me/collections`
+- `POST /me/collections`
+- `PATCH /me/collections/{collectionId}`
+- `DELETE /me/collections/{collectionId}`
+- `POST /me/collections/{collectionId}/programs`
+- `DELETE /me/collections/{collectionId}/programs/{programId}`
+
+M1.3C admin access APIs:
+
+- `GET /admin/programs/{programId}/access-grants`
+- `POST /admin/programs/{programId}/access-grants`
+- `POST /admin/program-access/{grantId}/revoke`
+
+Normal-user routes expose only authorized, published catalog data. Unauthorized reads use generic not-found errors and never disclose Program titles, Source, Connector, ImportJob, Artifact, staging, storage keys, Secrets, or tokens.
 
 ## 5. Route Guard States
 
