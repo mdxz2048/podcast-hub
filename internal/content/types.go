@@ -23,6 +23,10 @@ const (
 	ReviewStatusRejected       ReviewStatus  = "rejected"
 	MediaStatusStaged          MediaStatus   = "staged"
 	MediaStatusApproved        MediaStatus   = "approved"
+	MediaStatusPublished       MediaStatus   = "published"
+	MediaStatusArchived        MediaStatus   = "archived"
+	MediaStatusQuarantined     MediaStatus   = "quarantined"
+	MediaStatusDeleted         MediaStatus   = "deleted"
 )
 
 type Program struct {
@@ -77,8 +81,12 @@ type MediaAsset struct {
 	SizeBytes        int64       `json:"size_bytes"`
 	SHA256           string      `json:"sha256"`
 	Status           MediaStatus `json:"status"`
+	DeliveryStatus   MediaStatus `json:"delivery_status"`
 	CreatedAt        time.Time   `json:"created_at"`
+	PublishedAt      *time.Time  `json:"published_at,omitempty"`
+	DeletedAt        *time.Time  `json:"deleted_at,omitempty"`
 	StagedStorageKey string      `json:"-"`
+	PublishedKey     string      `json:"-"`
 }
 
 type PublicationEvent struct {

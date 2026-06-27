@@ -36,3 +36,17 @@ func TestLoad_ProductionMissingSecretsMasterKeyFails(t *testing.T) {
 		t.Fatalf("expected config load to fail when SECRETS_MASTER_KEY is missing")
 	}
 }
+
+func TestLoad_FailsWhenMediaAndStagingStoresAreSame(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://user:pass@localhost:5432/db")
+	t.Setenv("FRONTEND_ORIGIN", "http://127.0.0.1:5173")
+	t.Setenv("SESSION_PEPPER", "pepper")
+	t.Setenv("AUTH_CODE_PEPPER", "pepper2")
+	t.Setenv("STAGING_STORE_DIR", ".local/shared-media")
+	t.Setenv("MEDIA_STORE_DIR", ".local/shared-media")
+
+	_, err := Load()
+	if err == nil {
+		t.Fatalf("expected config load to fail when staging and media stores are the same")
+	}
+}

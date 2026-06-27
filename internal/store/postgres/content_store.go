@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,11 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/mdxz2048/podcast-hub/internal/content"
+	"github.com/mdxz2048/podcast-hub/internal/media"
 )
 
-type ContentStore struct{ pool *pgxpool.Pool }
+type ContentStore struct {
+	pool       *pgxpool.Pool
+	mediaStore *media.LocalStore
+}
 
-func NewContentStore(pool *pgxpool.Pool) *ContentStore { return &ContentStore{pool: pool} }
+func NewContentStore(pool *pgxpool.Pool, mediaStore *media.LocalStore) *ContentStore {
+	return &ContentStore{pool: pool, mediaStore: mediaStore}
+}
 
 func (s *ContentStore) UpsertProgramFromSource(ctx context.Context, in content.UpsertProgramInput) (content.Program, error) {
 	now := time.Now()
@@ -88,12 +96,12 @@ func (s *ContentStore) CreateOrKeepPendingReview(ctx context.Context, targetType
 
 func (s *ContentStore) CreateMediaAsset(ctx context.Context, in content.CreateMediaAssetInput) (content.MediaAsset, error) {
 	row := s.pool.QueryRow(ctx, `
-		INSERT INTO media_assets(id, owner_type, owner_id, import_job_id, artifact_id, media_kind, staged_storage_key, content_type, size_bytes, sha256, status, created_at)
-		VALUES ($1::uuid, $2, $3::uuid, $4::uuid, $5::uuid, $6, $7, $8, $9, $10, 'staged', NOW())
-		RETURNING id::text, owner_type, owner_id::text, import_job_id::text, artifact_id::text, media_kind, staged_storage_key, content_type, size_bytes, sha256, status, created_at
+		INSERT INTO media_assets(id, owner_type, owner_id, import_job_id, artifact_id, media_kind, staged_storage_key, content_type, size_bytes, sha256, status, delivery_status, created_at)
+		VALUES ($1::uuid, $2, $3::uuid, $4::uuid, $5::uuid, $6, $7, $8, $9, $10, 'staged', 'staged', NOW())
+		RETURNING id::text, owner_type, owner_id::text, import_job_id::text, artifact_id::text, media_kind, staged_storage_key, content_type, size_bytes, sha256, status, delivery_status, created_at, published_storage_key, published_at, deleted_at
 	`, uuid.NewString(), in.OwnerType, in.OwnerID, in.ImportJobID, in.ArtifactID, in.MediaKind, in.StagedStorageKey, in.ContentType, in.SizeBytes, in.SHA256)
 	var item content.MediaAsset
-	err := row.Scan(&item.ID, &item.OwnerType, &item.OwnerID, &item.ImportJobID, &item.ArtifactID, &item.MediaKind, &item.StagedStorageKey, &item.ContentType, &item.SizeBytes, &item.SHA256, &item.Status, &item.CreatedAt)
+	err := row.Scan(&item.ID, &item.OwnerType, &item.OwnerID, &item.ImportJobID, &item.ArtifactID, &item.MediaKind, &item.StagedStorageKey, &item.ContentType, &item.SizeBytes, &item.SHA256, &item.Status, &item.DeliveryStatus, &item.CreatedAt, &item.PublishedKey, &item.PublishedAt, &item.DeletedAt)
 	return item, err
 }
 
@@ -316,8 +324,84 @@ func (s *ContentStore) HasApprovedMedia(ctx context.Context, episodeID string) (
 }
 
 func (s *ContentStore) ApproveMediaForEpisode(ctx context.Context, episodeID string) error {
-	_, err := s.pool.Exec(ctx, `UPDATE media_assets SET status='approved' WHERE owner_type='episode' AND owner_id=$1::uuid AND status='staged'`, episodeID)
+	_, err := s.pool.Exec(ctx, `UPDATE media_assets SET status='approved', delivery_status='approved' WHERE owner_type='episode' AND owner_id=$1::uuid AND status='staged'`, episodeID)
 	return err
+}
+
+func (s *ContentStore) PromoteEpisodeMedia(ctx context.Context, episodeID string) error {
+	if s.mediaStore == nil {
+		return fmt.Errorf("media store is not configured")
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	type assetRow struct {
+		id        string
+		stagedKey string
+		sha256    string
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT id::text, staged_storage_key, sha256
+		FROM media_assets
+		WHERE owner_type='episode' AND owner_id=$1::uuid AND status='approved' AND delivery_status='approved'
+		ORDER BY created_at ASC
+	`, episodeID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	var assets []assetRow
+	for rows.Next() {
+		var item assetRow
+		if err := rows.Scan(&item.id, &item.stagedKey, &item.sha256); err != nil {
+			return err
+		}
+		assets = append(assets, item)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if len(assets) == 0 {
+		return fmt.Errorf("approved media not found")
+	}
+	var promoted []string
+	now := time.Now()
+	for _, item := range assets {
+		targetKey := filepath.ToSlash(filepath.Join("episodes", episodeID, item.id+"-"+shortHash(item.sha256)+".bin"))
+		if err := s.mediaStore.Promote(ctx, item.stagedKey, targetKey); err != nil {
+			for _, key := range promoted {
+				_ = s.mediaStore.DeletePublished(ctx, key)
+			}
+			return err
+		}
+		promoted = append(promoted, targetKey)
+		if _, err := tx.Exec(ctx, `
+			UPDATE media_assets
+			SET status='published', delivery_status='published', published_storage_key=$2, published_at=$3
+			WHERE id=$1::uuid
+		`, item.id, targetKey, now); err != nil {
+			for _, key := range promoted {
+				_ = s.mediaStore.DeletePublished(ctx, key)
+			}
+			return err
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		for _, key := range promoted {
+			_ = s.mediaStore.DeletePublished(ctx, key)
+		}
+		return err
+	}
+	return nil
+}
+
+func shortHash(value string) string {
+	if len(value) >= 12 {
+		return value[:12]
+	}
+	return value
 }
 
 func scanProgram(row interface{ Scan(dest ...any) error }) (content.Program, error) {

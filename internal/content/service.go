@@ -227,6 +227,9 @@ func (s *Service) PublishEpisode(ctx context.Context, episodeID string, actorID 
 	if !mediaOK {
 		return Episode{}, ErrPublishPrecondition
 	}
+	if err := s.store.PromoteEpisodeMedia(ctx, episodeID); err != nil {
+		return Episode{}, err
+	}
 	episode, err = s.store.SetEpisodeStatus(ctx, episodeID, EpisodeStatusPublished)
 	if err != nil {
 		return Episode{}, err

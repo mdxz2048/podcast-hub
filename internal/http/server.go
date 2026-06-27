@@ -19,6 +19,7 @@ import (
 	"github.com/mdxz2048/podcast-hub/internal/content"
 	"github.com/mdxz2048/podcast-hub/internal/intake"
 	"github.com/mdxz2048/podcast-hub/internal/jobs"
+	"github.com/mdxz2048/podcast-hub/internal/publication"
 	"github.com/mdxz2048/podcast-hub/internal/security"
 	"github.com/mdxz2048/podcast-hub/internal/sources"
 )
@@ -33,6 +34,7 @@ type Server struct {
 	jobs             *jobs.Service
 	content          *content.Service
 	intake           *intake.Service
+	publication      *publication.Service
 	resolveSessionFn func(ctx context.Context, token string) (auth.Session, auth.User, error)
 }
 
@@ -67,6 +69,8 @@ func NewServer(cfg config.Config, authService *auth.Service, turnstile security.
 			server.content = value
 		case *intake.Service:
 			server.intake = value
+		case *publication.Service:
+			server.publication = value
 		}
 	}
 	return server
@@ -86,6 +90,19 @@ func (s *Server) Router() stdhttp.Handler {
 	})
 	router.Get("/healthz", s.handleHealthz)
 	router.Get("/readyz", s.handleReadyz)
+	router.Get("/rss/private/{opaqueToken}.xml", s.handlePrivateRSS)
+	router.Get("/rss/private/{opaqueToken}/episodes/{episodeId}/media", s.handlePrivateRSSMedia)
+	router.Head("/rss/private/{opaqueToken}/episodes/{episodeId}/media", s.handlePrivateRSSMedia)
+	router.Group(func(r chi.Router) {
+		r.Use(s.RequireAuth)
+		r.Get("/media/episodes/{episodeId}", s.handleUserMedia)
+		r.Head("/media/episodes/{episodeId}", s.handleUserMedia)
+		r.Get("/me/rss-feeds", s.handleUserRSSFeeds)
+		r.Post("/me/rss-feeds", s.handleUserRSSFeedCreate)
+		r.Post("/me/rss-feeds/{feedId}/rotate", s.handleUserRSSFeedRotate)
+		r.Post("/me/rss-feeds/{feedId}/revoke", s.handleUserRSSFeedRevoke)
+		r.Delete("/me/rss-feeds/{feedId}", s.handleUserRSSFeedDelete)
+	})
 
 	router.Route("/auth", func(r chi.Router) {
 		r.Post("/register/request-code", s.handleRegisterRequestCode)
@@ -136,6 +153,11 @@ func (s *Server) Router() stdhttp.Handler {
 		r.Post("/review/{reviewId}/approve", s.handleAdminReviewApprove)
 		r.Post("/review/{reviewId}/reject", s.handleAdminReviewReject)
 		r.Get("/programs", s.handleAdminPrograms)
+		r.Get("/rss-feeds", s.handleAdminRSSFeeds)
+		r.Post("/rss-feeds/{feedId}/revoke", s.handleAdminRSSFeedRevoke)
+		r.Get("/programs/{programId}/access-grants", s.handleAdminProgramAccessGrants)
+		r.Post("/programs/{programId}/access-grants", s.handleAdminProgramAccessGrant)
+		r.Post("/program-access/{grantId}/revoke", s.handleAdminProgramAccessRevoke)
 		r.Get("/programs/{programId}", s.handleAdminProgram)
 		r.Patch("/programs/{programId}", s.handleAdminProgramPatch)
 		r.Post("/programs/{programId}/submit-review", s.handleAdminProgramSubmitReview)

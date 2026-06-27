@@ -27,9 +27,9 @@ export function UserLayout() {
             <Link className="hidden items-center gap-2 rounded-md px-3 py-2 text-secondary hover:bg-subtle sm:flex" to="/collections">
               <Folder className="h-4 w-4" /> 合集
             </Link>
-            <span className="hidden items-center gap-2 rounded-md px-3 py-2 text-secondary sm:flex">
+            <Link className="hidden items-center gap-2 rounded-md px-3 py-2 text-secondary hover:bg-subtle sm:flex" to="/rss">
               <Radio className="h-4 w-4" /> RSS
-            </span>
+            </Link>
             <span className="hidden items-center gap-2 rounded-md border border-border px-3 py-2 text-secondary md:inline-flex">
               <UserRound className="h-4 w-4" />
               <span className="max-w-40 truncate">{user?.email ?? "访客"}</span>

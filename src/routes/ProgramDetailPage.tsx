@@ -97,6 +97,10 @@ export function ProgramDetailPage() {
         </div>
       </section>
       {favorite ? <SuccessFeedback message="收藏状态已更新到本地内存，刷新后会恢复初始状态。" /> : null}
+      <section className="rounded-lg border border-success/20 bg-success/10 p-4 text-sm text-primary">
+        <p className="font-semibold">授权后可播放</p>
+        <p className="mt-1 text-secondary">真实版本会在已登录、节目授权有效且单集已发布时提供私有播放能力。当前原型不会显示真实媒体链接，也不会提供下载按钮。</p>
+      </section>
       <section>
         <h2 className="mb-4 text-xl font-semibold">最近单集</h2>
         {programEpisodes.length === 0 ? <EmptyState title="这个节目还没有可预览单集" /> : (

@@ -1,18 +1,43 @@
 import { createContext, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { collections as initialCollections } from "./data";
-import type { Collection, CollectionRules } from "../types/domain";
+import type { Collection, CollectionRules, UserRssFeed } from "../types/domain";
 import type { ToastMessage } from "../components/Toast";
 import { ToastViewport } from "../components/Toast";
 
+const initialRssFeeds: UserRssFeed[] = [
+  {
+    id: "feed-1",
+    name: "每日通勤订阅",
+    status: "active",
+    tokenPrefix: "rss_7fa9",
+    createdAt: "2026-06-21 09:15",
+    lastUsedAt: "2026-06-27 08:10"
+  }
+];
+
+type RevealedRssToken = {
+  feedId: string;
+  token: string;
+  url: string;
+  action: "created" | "rotated";
+};
+
 interface MockStateValue {
   collections: Collection[];
+  rssFeeds: UserRssFeed[];
+  revealedRssToken: RevealedRssToken | null;
   createCollection: (title: string, programId?: string) => Collection;
   addProgramToCollection: (collectionId: string, programId: string) => void;
   removeProgramFromCollection: (collectionId: string, programId: string) => void;
   moveProgram: (collectionId: string, programId: string, direction: "up" | "down") => void;
   updateCollection: (collectionId: string, patch: Partial<Pick<Collection, "title" | "description" | "programIds">> & { rules?: CollectionRules }) => void;
   resetRssToken: (collectionId: string) => void;
+  createRssFeed: (name: string) => RevealedRssToken;
+  rotateRssFeed: (feedId: string) => RevealedRssToken | null;
+  revokeRssFeed: (feedId: string) => void;
+  deleteRssFeed: (feedId: string) => void;
+  clearRevealedRssToken: () => void;
   showToast: (toast: Omit<ToastMessage, "id">) => void;
 }
 
@@ -20,6 +45,8 @@ const MockStateContext = createContext<MockStateValue | null>(null);
 
 export function MockStateProvider({ children }: { children: ReactNode }) {
   const [collections, setCollections] = useState<Collection[]>(initialCollections);
+  const [rssFeeds, setRssFeeds] = useState<UserRssFeed[]>(initialRssFeeds);
+  const [revealedRssToken, setRevealedRssToken] = useState<RevealedRssToken | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   function showToast(toast: Omit<ToastMessage, "id">) {
@@ -32,6 +59,8 @@ export function MockStateProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<MockStateValue>(() => ({
     collections,
+    rssFeeds,
+    revealedRssToken,
     createCollection: (title, programId) => {
       const collection: Collection = {
         id: `collection_mock_${Date.now()}`,
@@ -86,8 +115,57 @@ export function MockStateProvider({ children }: { children: ReactNode }) {
         collection.id === collectionId ? { ...collection, rssTokenState: "active", lastUpdatedAt: "刚刚" } : collection
       )));
     },
+    createRssFeed: (name) => {
+      const now = new Date();
+      const feedId = `feed_${Date.now()}`;
+      const suffix = Math.random().toString(16).slice(2, 8);
+      const token = `rss_${suffix}_${Date.now().toString(36)}`;
+      const feed: UserRssFeed = {
+        id: feedId,
+        name: name.trim() || "新的私有 RSS",
+        status: "active",
+        tokenPrefix: token.slice(0, 8),
+        createdAt: now.toLocaleString("zh-CN", { hour12: false }),
+        lastUsedAt: "尚未使用"
+      };
+      setRssFeeds((current) => [feed, ...current]);
+      const revealed = { feedId, token, url: `https://rss.example.invalid/rss/private/${token}.xml`, action: "created" as const };
+      setRevealedRssToken(revealed);
+      return revealed;
+    },
+    rotateRssFeed: (feedId) => {
+      const now = new Date();
+      let revealed: RevealedRssToken | null = null;
+      setRssFeeds((current) => current.map((feed) => {
+        if (feed.id !== feedId) return feed;
+        const suffix = Math.random().toString(16).slice(2, 8);
+        const token = `rss_${suffix}_${Date.now().toString(36)}`;
+        revealed = { feedId, token, url: `https://rss.example.invalid/rss/private/${token}.xml`, action: "rotated" };
+        setRevealedRssToken(revealed);
+        return {
+          ...feed,
+          status: "active",
+          tokenPrefix: token.slice(0, 8),
+          rotatedAt: now.toLocaleString("zh-CN", { hour12: false })
+        };
+      }));
+      return revealed;
+    },
+    revokeRssFeed: (feedId) => {
+      setRssFeeds((current) => current.map((feed) => (
+        feed.id === feedId ? { ...feed, status: "revoked" } : feed
+      )));
+      setRevealedRssToken((current) => (current?.feedId === feedId ? null : current));
+    },
+    deleteRssFeed: (feedId) => {
+      setRssFeeds((current) => current.filter((feed) => feed.id !== feedId));
+      setRevealedRssToken((current) => (current?.feedId === feedId ? null : current));
+    },
+    clearRevealedRssToken: () => {
+      setRevealedRssToken(null);
+    },
     showToast
-  }), [collections]);
+  }), [collections, revealedRssToken, rssFeeds]);
 
   return (
     <MockStateContext.Provider value={value}>

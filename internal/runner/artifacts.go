@@ -91,14 +91,14 @@ func ValidateArtifacts(jobID string, outputDir string, declared []DeclaredArtifa
 
 func cleanArtifactPath(raw string) (string, error) {
 	value := strings.TrimSpace(raw)
-	if value == "" || filepath.IsAbs(value) {
+	if value == "" || filepath.IsAbs(value) || strings.HasPrefix(value, "/") || strings.HasPrefix(value, `\`) {
 		return "", ErrArtifactPathEscape
 	}
 	cleaned := filepath.Clean(value)
 	if cleaned == "." || strings.HasPrefix(cleaned, ".."+string(filepath.Separator)) || cleaned == ".." {
 		return "", ErrArtifactPathEscape
 	}
-	return cleaned, nil
+	return filepath.ToSlash(cleaned), nil
 }
 
 func sha256File(path string) (string, error) {
@@ -131,6 +131,7 @@ func rejectUndeclaredFiles(outputDir string, declared map[string]struct{}) error
 			if err != nil {
 				return err
 			}
+			rel = filepath.ToSlash(rel)
 			if _, ok := declared[rel]; !ok {
 				return ErrArtifactUndeclared
 			}

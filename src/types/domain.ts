@@ -77,6 +77,17 @@ export interface Collection {
   rules: CollectionRules;
 }
 
+export interface UserRssFeed {
+  id: string;
+  name: string;
+  status: "active" | "revoked" | "expired";
+  tokenPrefix: string;
+  createdAt: string;
+  lastUsedAt?: string;
+  rotatedAt?: string;
+  expiresAt?: string;
+}
+
 export interface Source {
   id: string;
   programId: string;

@@ -343,6 +343,20 @@ func (m *memoryContentStore) ApproveMediaForEpisode(_ context.Context, episodeID
 	for i, item := range m.media {
 		if item.OwnerID == episodeID {
 			item.Status = content.MediaStatusApproved
+			item.DeliveryStatus = content.MediaStatusApproved
+			m.media[i] = item
+		}
+	}
+	return nil
+}
+func (m *memoryContentStore) PromoteEpisodeMedia(_ context.Context, episodeID string) error {
+	for i, item := range m.media {
+		if item.OwnerID == episodeID && item.Status == content.MediaStatusApproved {
+			now := time.Now()
+			item.Status = content.MediaStatusPublished
+			item.DeliveryStatus = content.MediaStatusPublished
+			item.PublishedAt = &now
+			item.PublishedKey = "episodes/" + episodeID + "/" + item.ID + ".bin"
 			m.media[i] = item
 		}
 	}

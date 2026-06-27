@@ -28,4 +28,5 @@ type Store interface {
 	CountPendingReviews(ctx context.Context, targetType string, targetID string) (int, error)
 	HasApprovedMedia(ctx context.Context, episodeID string) (bool, error)
 	ApproveMediaForEpisode(ctx context.Context, episodeID string) error
+	PromoteEpisodeMedia(ctx context.Context, episodeID string) error
 }

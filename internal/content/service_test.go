@@ -83,12 +83,41 @@ func TestPublishPreconditionsAndMetadataAudit(t *testing.T) {
 	}
 }
 
+func TestPublishEpisodeRequiresSuccessfulMediaPromotion(t *testing.T) {
+	ctx := context.Background()
+	store := newContentMemoryStore()
+	service := NewService(store)
+
+	store.programs["program-1"] = programWithStatus(ProgramStatusPublished)
+	store.episodes["episode-1"] = episodeWithStatus(EpisodeStatusApproved)
+	store.media["episode-1"] = true
+	approvedBy := "admin"
+	approvedAt := time.Now()
+	store.reviews["review-episode"] = ReviewItem{ID: "review-episode", TargetType: "episode", TargetID: "episode-1", ReviewKind: "metadata", Status: ReviewStatusApproved, ReviewedBy: &approvedBy, ReviewedAt: &approvedAt, CreatedAt: approvedAt}
+	store.promoteErr = errors.New("promote failed")
+
+	if _, err := service.PublishEpisode(ctx, "episode-1", "admin"); err == nil || err.Error() != "promote failed" {
+		t.Fatalf("expected promote failure, got %v", err)
+	}
+	if store.episodes["episode-1"].Status != EpisodeStatusApproved {
+		t.Fatalf("expected episode to remain approved, got %s", store.episodes["episode-1"].Status)
+	}
+	if store.promoteCalls != 1 {
+		t.Fatalf("expected one promote call, got %d", store.promoteCalls)
+	}
+	if len(store.eventsByType["published"]) != 0 {
+		t.Fatalf("expected no published event on promote failure")
+	}
+}
+
 type contentMemoryStore struct {
 	programs     map[string]Program
 	episodes     map[string]Episode
 	reviews      map[string]ReviewItem
 	media        map[string]bool
 	eventsByType map[string][]PublicationEvent
+	promoteErr   error
+	promoteCalls int
 }
 
 func newContentMemoryStore() *contentMemoryStore {
@@ -228,4 +257,8 @@ func (s *contentMemoryStore) HasApprovedMedia(_ context.Context, episodeID strin
 func (s *contentMemoryStore) ApproveMediaForEpisode(_ context.Context, episodeID string) error {
 	s.media[episodeID] = true
 	return nil
+}
+func (s *contentMemoryStore) PromoteEpisodeMedia(_ context.Context, episodeID string) error {
+	s.promoteCalls++
+	return s.promoteErr
 }

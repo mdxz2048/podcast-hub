@@ -37,6 +37,7 @@ import { ProgramsPage } from "./routes/ProgramsPage";
 import { RegisterPage } from "./routes/RegisterPage";
 import { RegisterVerifyPage } from "./routes/RegisterVerifyPage";
 import { ResetPasswordPage } from "./routes/ResetPasswordPage";
+import { RssFeedsPage } from "./routes/RssFeedsPage";
 import { SubscribePage } from "./routes/SubscribePage";
 import "./styles/tokens.css";
 import "./styles/global.css";
@@ -59,6 +60,7 @@ createRoot(document.getElementById("root")!).render(
             <Route element={<UserLayout />}>
               <Route path="/programs" element={<ProgramsPage />} />
               <Route path="/programs/:programId" element={<ProgramDetailPage />} />
+              <Route path="/rss" element={<RssFeedsPage />} />
               <Route path="/collections" element={<CollectionsPage />} />
               <Route path="/collections/:collectionId" element={<CollectionEditorPage />} />
               <Route path="/collections/:collectionId/subscribe" element={<SubscribePage />} />

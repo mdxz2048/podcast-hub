@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -33,32 +34,35 @@ func TestValidateArtifactsRecordsHashAndSize(t *testing.T) {
 func TestValidateArtifactsRejectsUnsafeOutputs(t *testing.T) {
 	tests := []struct {
 		name     string
-		setup    func(string)
+		setup    func(*testing.T, string)
 		declared []DeclaredArtifact
 		limits   ArtifactLimits
 		want     error
 	}{
 		{name: "path escape", declared: []DeclaredArtifact{{ArtifactType: "episode_metadata", RelativePath: "../outside.json"}}, want: ErrArtifactPathEscape},
 		{name: "absolute path", declared: []DeclaredArtifact{{ArtifactType: "episode_metadata", RelativePath: "/tmp/outside.json"}}, want: ErrArtifactPathEscape},
-		{name: "symlink", setup: func(dir string) {
+		{name: "symlink", setup: func(t *testing.T, dir string) {
 			writeArtifact(t, dir, "target.json", []byte("ok"))
 			if err := os.Symlink(filepath.Join(dir, "target.json"), filepath.Join(dir, "link.json")); err != nil {
+				if strings.Contains(strings.ToLower(err.Error()), "privilege") {
+					t.Skipf("symlink creation is unavailable in this Windows environment: %v", err)
+				}
 				t.Fatalf("symlink: %v", err)
 			}
 		}, declared: []DeclaredArtifact{{ArtifactType: "episode_metadata", RelativePath: "link.json"}}, want: ErrArtifactInvalidType},
-		{name: "directory", setup: func(dir string) {
+		{name: "directory", setup: func(t *testing.T, dir string) {
 			if err := os.MkdirAll(filepath.Join(dir, "folder"), 0o700); err != nil {
 				t.Fatalf("mkdir: %v", err)
 			}
 		}, declared: []DeclaredArtifact{{ArtifactType: "episode_metadata", RelativePath: "folder"}}, want: ErrArtifactInvalidType},
 		{name: "too many", declared: []DeclaredArtifact{{ArtifactType: "a", RelativePath: "one.json"}, {ArtifactType: "a", RelativePath: "two.json"}}, limits: ArtifactLimits{MaxArtifacts: 1, MaxSingleFileBytes: 100, MaxTotalBytes: 100}, want: ErrArtifactTooMany},
-		{name: "too large", setup: func(dir string) {
+		{name: "too large", setup: func(t *testing.T, dir string) {
 			writeArtifact(t, dir, "big.json", []byte("0123456789"))
 		}, declared: []DeclaredArtifact{{ArtifactType: "episode_metadata", RelativePath: "big.json"}}, limits: ArtifactLimits{MaxArtifacts: 10, MaxSingleFileBytes: 2, MaxTotalBytes: 100}, want: ErrArtifactTooLarge},
-		{name: "undeclared", setup: func(dir string) {
+		{name: "undeclared", setup: func(t *testing.T, dir string) {
 			writeArtifact(t, dir, "extra.json", []byte("hidden"))
 		}, declared: nil, want: ErrArtifactUndeclared},
-		{name: "duplicate", setup: func(dir string) {
+		{name: "duplicate", setup: func(t *testing.T, dir string) {
 			writeArtifact(t, dir, "dup.json", []byte("ok"))
 		}, declared: []DeclaredArtifact{{ArtifactType: "episode_metadata", RelativePath: "dup.json"}, {ArtifactType: "episode_metadata", RelativePath: "dup.json"}}, want: ErrArtifactDuplicate},
 	}
@@ -66,7 +70,7 @@ func TestValidateArtifactsRejectsUnsafeOutputs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			outputDir := t.TempDir()
 			if tt.setup != nil {
-				tt.setup(outputDir)
+				tt.setup(t, outputDir)
 			}
 			_, err := ValidateArtifacts("job1", outputDir, tt.declared, tt.limits)
 			if !errors.Is(err, tt.want) {

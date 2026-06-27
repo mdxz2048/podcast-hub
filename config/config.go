@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -44,6 +45,8 @@ type Config struct {
 	RunnerPythonTelegramImage string
 	RunnerWorkspaceRoot       string
 	ImportArtifactStoreDir    string
+	StagingStoreDir           string
+	MediaStoreDir             string
 }
 
 func Load() (Config, error) {
@@ -75,6 +78,8 @@ func Load() (Config, error) {
 		RunnerPythonTelegramImage: os.Getenv("RUNNER_PYTHON_TELEGRAM_IMAGE"),
 		RunnerWorkspaceRoot:       getEnv("RUNNER_WORKSPACE_ROOT", ".local/runner-workspaces"),
 		ImportArtifactStoreDir:    getEnv("IMPORT_ARTIFACT_STORE_DIR", ".local/import-artifacts"),
+		StagingStoreDir:           getEnv("STAGING_STORE_DIR", getEnv("IMPORT_ARTIFACT_STORE_DIR", ".local/import-artifacts")),
+		MediaStoreDir:             getEnv("MEDIA_STORE_DIR", ".local/published-media"),
 	}
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err
@@ -128,12 +133,27 @@ func (c Config) Validate() error {
 	if c.TurnstileMode == "cloudflare" && strings.TrimSpace(c.TurnstileSecretKey) == "" {
 		return errors.New("TURNSTILE_SECRET_KEY is required when TURNSTILE_MODE=cloudflare")
 	}
+	if samePath(c.StagingStoreDir, c.MediaStoreDir) {
+		return errors.New("STAGING_STORE_DIR and MEDIA_STORE_DIR must be isolated")
+	}
 	switch c.RunnerMode {
 	case "disabled", "docker_trusted_admin":
 	default:
 		return errors.New("RUNNER_MODE must be one of: disabled, docker_trusted_admin")
 	}
 	return nil
+}
+
+func samePath(a string, b string) bool {
+	if strings.TrimSpace(a) == "" || strings.TrimSpace(b) == "" {
+		return false
+	}
+	aAbs, errA := filepath.Abs(a)
+	bAbs, errB := filepath.Abs(b)
+	if errA != nil || errB != nil {
+		return strings.EqualFold(filepath.Clean(a), filepath.Clean(b))
+	}
+	return strings.EqualFold(filepath.Clean(aAbs), filepath.Clean(bAbs))
 }
 
 func getEnv(key, fallback string) string {
