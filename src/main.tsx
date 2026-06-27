@@ -13,8 +13,10 @@ import { AdminConnectorNewPage } from "./routes/AdminConnectorNewPage";
 import { AdminConnectorsPage } from "./routes/AdminConnectorsPage";
 import { AdminImportJobDetailPage } from "./routes/AdminImportJobDetailPage";
 import { AdminImportJobsPage } from "./routes/AdminImportJobsPage";
+import { AdminEpisodeDetailPage } from "./routes/AdminEpisodeDetailPage";
 import { AdminProgramDetailPage } from "./routes/AdminProgramDetailPage";
 import { AdminProgramsPage } from "./routes/AdminProgramsPage";
+import { AdminReviewDetailPage } from "./routes/AdminReviewDetailPage";
 import { AdminReviewsPage } from "./routes/AdminReviewsPage";
 import { AdminSecretsPage } from "./routes/AdminSecretsPage";
 import { AdminSourceDetailPage } from "./routes/AdminSourceDetailPage";
@@ -65,6 +67,7 @@ createRoot(document.getElementById("root")!).render(
               <Route index element={<AdminOverviewPage />} />
               <Route path="programs" element={<AdminProgramsPage />} />
               <Route path="programs/:programId" element={<AdminProgramDetailPage />} />
+              <Route path="episodes/:episodeId" element={<AdminEpisodeDetailPage />} />
               <Route path="connectors" element={<AdminConnectorsPage />} />
               <Route path="connectors/new" element={<AdminConnectorNewPage />} />
               <Route path="connectors/:connectorId" element={<AdminConnectorDetailPage />} />
@@ -78,6 +81,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="staging/programs/:programId" element={<AdminStagingProgramDetailPage />} />
               <Route path="staging/episodes/:episodeId" element={<AdminStagingEpisodeDetailPage />} />
               <Route path="reviews" element={<AdminReviewsPage />} />
+              <Route path="review/:reviewId" element={<AdminReviewDetailPage />} />
               <Route path="users" element={<AdminUsersPage />} />
             </Route>
           </Routes>

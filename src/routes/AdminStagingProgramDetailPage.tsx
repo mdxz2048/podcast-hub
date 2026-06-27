@@ -45,7 +45,7 @@ export function AdminStagingProgramDetailPage() {
       </section>
       <section className="rounded-lg border border-warning/30 bg-warning/5 p-4 text-sm text-secondary">
         <p className="font-medium text-primary">审核前状态</p>
-        <p className="mt-1">该 Program 仍在 staging/review_pending 范围内，不提供发布、RSS、订阅或用户可见入口。</p>
+        <p className="mt-1">该 Program 仍在 staging/review_pending 范围内，不提供发布、订阅源、订阅或用户可见入口。</p>
       </section>
     </div>
   );

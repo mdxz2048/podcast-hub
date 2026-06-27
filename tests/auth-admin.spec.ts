@@ -77,6 +77,12 @@ async function mockConnectorAdminApi(page: Page) {
   const failedJob = { ...importJob, id: "job-failed", status: "failed", failure_code: "fixture_error", failure_message_redacted: "fixture failed" };
   const stagingProgram = { id: "program-1", canonical_key: "source:s1:program-1", title: "候选节目", description: "等待审核的节目描述", author: "Fixture", language: "zh-CN", status: "review_pending", created_from_source_id: "s1", created_from_job_id: "job-completed", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:10:00Z" };
   const stagingEpisode = { id: "episode-1", program_id: "program-1", external_episode_id: "ep-1", title: "候选单集", description: "等待审核的单集描述", published_at: "2026-01-01T00:00:00Z", duration_seconds: 120, status: "review_pending", source_job_id: "job-completed", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:10:00Z" };
+  let adminProgram = { ...stagingProgram };
+  let adminEpisode = { ...stagingEpisode };
+  let reviews = [
+    { id: "review-program", target_type: "program", target_id: "program-1", review_kind: "metadata", status: "pending", review_note: "", created_at: "2026-01-01T00:10:00Z" },
+    { id: "review-episode", target_type: "episode", target_id: "episode-1", review_kind: "metadata", status: "pending", review_note: "", created_at: "2026-01-01T00:10:00Z" }
+  ];
   await page.route("http://127.0.0.1:8080/admin/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -130,7 +136,7 @@ async function mockConnectorAdminApi(page: Page) {
       });
       return;
     }
-    if (request.method() === "POST" && (url.pathname.endsWith("/approve") || url.pathname.endsWith("/reject") || url.pathname.endsWith("/disable"))) {
+    if (request.method() === "POST" && url.pathname.includes("/admin/connector-versions/") && (url.pathname.endsWith("/approve") || url.pathname.endsWith("/reject") || url.pathname.endsWith("/disable"))) {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ version: versions[0] }) });
       return;
     }
@@ -168,6 +174,101 @@ async function mockConnectorAdminApi(page: Page) {
     }
     if (request.method() === "POST" && url.pathname.endsWith("/admin/secrets/text")) {
       await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ secret: secrets[0] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/review")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ reviews }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/review/review-program")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ review: reviews[0] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/review/review-episode")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ review: reviews[1] }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/review/review-program/approve")) {
+      reviews = reviews.map((review) => review.id === "review-program" ? { ...review, status: "approved", reviewed_at: "2026-01-01T00:20:00Z" } : review);
+      adminProgram = { ...adminProgram, status: "approved", updated_at: "2026-01-01T00:20:00Z" };
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ review: reviews[0] }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/review/review-episode/approve")) {
+      reviews = reviews.map((review) => review.id === "review-episode" ? { ...review, status: "approved", reviewed_at: "2026-01-01T00:22:00Z" } : review);
+      adminEpisode = { ...adminEpisode, status: "approved", updated_at: "2026-01-01T00:22:00Z" };
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ review: reviews[1] }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/review/review-program/reject")) {
+      const body = JSON.parse(request.postData() ?? "{}") as { reason?: string };
+      if (!body.reason?.trim()) {
+        await route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: { code: "review_reason_required", message: "拒绝审核必须提供原因。" } }) });
+        return;
+      }
+      reviews = reviews.map((review) => review.id === "review-program" ? { ...review, status: "rejected", review_note: body.reason ?? "", reviewed_at: "2026-01-01T00:21:00Z" } : review);
+      adminProgram = { ...adminProgram, status: "rejected" };
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ review: reviews[0] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/programs")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ programs: [adminProgram] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/programs/program-1")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ program: adminProgram, episodes: [adminEpisode] }) });
+      return;
+    }
+    if (request.method() === "PATCH" && url.pathname.endsWith("/admin/programs/program-1")) {
+      const body = JSON.parse(request.postData() ?? "{}") as { title?: string; description?: string };
+      adminProgram = { ...adminProgram, title: body.title ?? adminProgram.title, description: body.description ?? adminProgram.description };
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ program: adminProgram }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/programs/program-1/publish")) {
+      if (adminProgram.status !== "approved") {
+        await route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: { code: "publish_precondition_failed", message: "发布前置条件未满足。" } }) });
+        return;
+      }
+      adminProgram = { ...adminProgram, status: "published", updated_at: "2026-01-01T00:23:00Z" };
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ program: adminProgram }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/programs/program-1/archive")) {
+      adminProgram = { ...adminProgram, status: "archived" };
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ program: adminProgram }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/programs/program-1/submit-review")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ review: reviews[0] }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname.endsWith("/admin/episodes/episode-1")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ episode: adminEpisode }) });
+      return;
+    }
+    if (request.method() === "PATCH" && url.pathname.endsWith("/admin/episodes/episode-1")) {
+      const body = JSON.parse(request.postData() ?? "{}") as { title?: string; description?: string };
+      adminEpisode = { ...adminEpisode, title: body.title ?? adminEpisode.title, description: body.description ?? adminEpisode.description };
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ episode: adminEpisode }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/episodes/episode-1/publish")) {
+      if (adminEpisode.status !== "approved" || adminProgram.status !== "published") {
+        await route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: { code: "publish_precondition_failed", message: "发布前置条件未满足。" } }) });
+        return;
+      }
+      adminEpisode = { ...adminEpisode, status: "published" };
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ episode: adminEpisode }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/episodes/episode-1/archive")) {
+      adminEpisode = { ...adminEpisode, status: "archived" };
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ episode: adminEpisode }) });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/admin/episodes/episode-1/submit-review")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ review: reviews[1] }) });
       return;
     }
     if (request.method() === "GET" && url.pathname.endsWith("/admin/import-jobs")) {
@@ -469,6 +570,68 @@ test("admin staging empty state is driven by API", async ({ page }) => {
   });
   await page.goto("/admin/staging");
   await expect(page.getByText("待审核区暂无内容")).toBeVisible();
+});
+
+test("admin review workflow enforces reason and publish preconditions", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+
+  await page.goto("/admin/reviews");
+  await expect(page.getByText("review-program")).toBeVisible();
+  await page.getByRole("button", { name: "拒绝" }).first().click();
+  await expect(page.getByText("拒绝审核必须提供原因。")).toBeVisible();
+
+  await page.goto("/admin/programs/program-1");
+  await expect(page.getByText("只有 approved Program 可以发布。")).toBeVisible();
+  await expect(page.getByRole("button", { name: "发布" })).toBeDisabled();
+
+  await page.goto("/admin/reviews");
+  await page.getByRole("button", { name: "通过" }).first().click();
+  await expect(page.getByText("审核已通过。")).toBeVisible();
+
+  await page.goto("/admin/programs/program-1");
+  await expect(page.getByRole("button", { name: "发布" })).toBeEnabled();
+  await page.getByRole("button", { name: "发布" }).click();
+  await expect(page.getByText("Program 已发布。")).toBeVisible();
+  await expect(page.getByText("RSS")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "下载媒体" })).toHaveCount(0);
+});
+
+test("admin episode review publish and archive use real API", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+
+  await page.goto("/admin/reviews");
+  await page.getByRole("button", { name: "通过" }).first().click();
+  await page.goto("/admin/programs/program-1");
+  await page.getByRole("button", { name: "发布" }).click();
+  await expect(page.getByText("Program 已发布。")).toBeVisible();
+
+  await page.goto("/admin/episodes/episode-1");
+  await expect(page.getByText("只有 approved Episode 可以发布。")).toBeVisible();
+  await expect(page.getByRole("button", { name: "发布" })).toBeDisabled();
+
+  await page.goto("/admin/review/review-episode");
+  await page.getByRole("button", { name: "通过" }).click();
+  await expect(page.getByText("审核已通过。")).toBeVisible();
+
+  await page.goto("/admin/episodes/episode-1");
+  await page.getByRole("button", { name: "发布" }).click();
+  await expect(page.getByText("Episode 已发布。")).toBeVisible();
+  await page.getByRole("button", { name: "归档" }).click();
+  await expect(page.getByText("Episode 已归档。")).toBeVisible();
+  await expect(page.getByText("RSS")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "下载媒体" })).toHaveCount(0);
+});
+
+test("admin review empty state is driven by API", async ({ page }) => {
+  await mockAuthApi(page, buildUser("admin"));
+  await mockConnectorAdminApi(page);
+  await page.route("http://127.0.0.1:8080/admin/review", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ reviews: [] }) });
+  });
+  await page.goto("/admin/reviews");
+  await expect(page.getByText("当前没有审核项")).toBeVisible();
 });
 
 test("admin can create manual import job from runnable source", async ({ page }) => {

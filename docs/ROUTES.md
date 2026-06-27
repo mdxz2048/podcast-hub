@@ -35,8 +35,9 @@ Account and admin identity routes are connected to real backend APIs. Connector 
 | Route | Page | M0 Phase | Notes |
 | --- | --- | --- | --- |
 | `/admin` | Admin overview | M0.1 | Static operational overview. |
-| `/admin/programs` | Program list | M0.1 | Static Program management list. |
-| `/admin/programs/:programId` | Program detail | M0.2B | Static Program operation view with Sources, Episodes, publication, and activity sections. |
+| `/admin/programs` | Program list | M1.3B | Real admin Program metadata and lifecycle status. |
+| `/admin/programs/:programId` | Program detail | M1.3B | Real metadata edit, submit review, publish, archive, and Episode links. |
+| `/admin/episodes/:episodeId` | Episode detail | M1.3B | Real metadata edit, submit review, publish, and archive controls. |
 | `/admin/connectors` | Connector list | M1.1A | Real admin Connector registry list API. |
 | `/admin/connectors/new` | Connector upload | M1.1A | Real multipart ZIP upload + static validation result display; no execution. |
 | `/admin/connectors/:connectorId` | Connector detail | M1.1A | Real version/review status + manifest summary + enable/disable actions. |
@@ -49,7 +50,8 @@ Account and admin identity routes are connected to real backend APIs. Connector 
 | `/admin/staging` | Staging intake list | M1.3A | Real review-pending Program/Episode candidates from completed ImportJob artifacts. |
 | `/admin/staging/programs/:programId` | Staging Program detail | M1.3A | Admin-only candidate metadata; no publish/RSS/user link. |
 | `/admin/staging/episodes/:episodeId` | Staging Episode detail | M1.3A | Admin-only candidate metadata; no path/download/RSS/user link. |
-| `/admin/reviews` | Review queue | M0.2B | Static review queue with Drawer details and confirmation Dialogs. |
+| `/admin/reviews` | Review queue | M1.3B | Real pending/approved/rejected review items with approve/reject actions. |
+| `/admin/review/:reviewId` | Review detail | M1.3B | Real review detail and approve/reject actions. |
 | `/admin/publications` | Publications | M0.2 | Static RSS publication state. |
 | `/admin/users` | Users and access | M0.2B | Static user/access view; no invitations or real user management in M0. |
 | `/admin/audit` | Audit log | M0.2 | Static audit list. |
@@ -119,6 +121,26 @@ Additional real admin staging intake APIs in M1.3A:
 - `GET /admin/staging/episodes/{episodeId}`
 
 M1.3A routes remain admin-only. They expose review-pending candidate metadata only: no Secret values, no storage keys, no absolute paths, no Artifact file contents, no published media URLs, no RSS, and no normal-user visibility.
+
+Additional real admin review and publication APIs in M1.3B:
+
+- `GET /admin/review`
+- `GET /admin/review/{reviewId}`
+- `POST /admin/review/{reviewId}/approve`
+- `POST /admin/review/{reviewId}/reject`
+- `GET /admin/programs`
+- `GET /admin/programs/{programId}`
+- `PATCH /admin/programs/{programId}`
+- `POST /admin/programs/{programId}/submit-review`
+- `POST /admin/programs/{programId}/publish`
+- `POST /admin/programs/{programId}/archive`
+- `GET /admin/episodes/{episodeId}`
+- `PATCH /admin/episodes/{episodeId}`
+- `POST /admin/episodes/{episodeId}/submit-review`
+- `POST /admin/episodes/{episodeId}/publish`
+- `POST /admin/episodes/{episodeId}/archive`
+
+M1.3B still does not expose published content to normal users. User catalog and access grants are deferred to M1.3C.
 
 ## 5. Route Guard States
 

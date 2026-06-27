@@ -81,11 +81,9 @@ func (s *ContentStore) CreateOrKeepPendingReview(ctx context.Context, targetType
 		VALUES ($1::uuid, $2, $3::uuid, $4, 'pending', $5::uuid, NOW())
 		ON CONFLICT (target_type, target_id, review_kind) WHERE status='pending'
 		DO UPDATE SET requested_by_job_id=EXCLUDED.requested_by_job_id
-		RETURNING id::text, target_type, target_id::text, review_kind, status, requested_by_job_id::text, review_note, created_at
-	`, id, targetType, targetID, reviewKind, jobID)
-	var item content.ReviewItem
-	err := row.Scan(&item.ID, &item.TargetType, &item.TargetID, &item.ReviewKind, &item.Status, &item.RequestedByJobID, &item.ReviewNote, &item.CreatedAt)
-	return item, err
+		RETURNING id::text, target_type, target_id::text, review_kind, status, requested_by_job_id::text, reviewed_by::text, review_note, created_at, reviewed_at
+	`, id, targetType, targetID, reviewKind, emptyToNil(jobID))
+	return scanReview(row)
 }
 
 func (s *ContentStore) CreateMediaAsset(ctx context.Context, in content.CreateMediaAssetInput) (content.MediaAsset, error) {
@@ -177,6 +175,151 @@ func (s *ContentStore) GetEpisode(ctx context.Context, episodeID string) (conten
 	return item, err == nil, err
 }
 
+func (s *ContentStore) ListAdminPrograms(ctx context.Context) ([]content.Program, error) {
+	rows, err := s.pool.Query(ctx, `SELECT id::text, canonical_key, title, description, author, language, status, created_from_source_id::text, created_from_job_id::text, created_at, updated_at FROM programs ORDER BY updated_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []content.Program
+	for rows.Next() {
+		item, err := scanProgram(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (s *ContentStore) GetAdminProgram(ctx context.Context, programID string) (content.Program, bool, error) {
+	return s.GetProgram(ctx, programID)
+}
+
+func (s *ContentStore) GetAdminEpisode(ctx context.Context, episodeID string) (content.Episode, bool, error) {
+	return s.GetEpisode(ctx, episodeID)
+}
+
+func (s *ContentStore) ListProgramEpisodes(ctx context.Context, programID string) ([]content.Episode, error) {
+	rows, err := s.pool.Query(ctx, `SELECT id::text, program_id::text, external_episode_id, title, description, published_at, duration_seconds, status, source_job_id::text, created_at, updated_at FROM episodes WHERE program_id=$1::uuid ORDER BY published_at DESC`, programID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []content.Episode
+	for rows.Next() {
+		item, err := scanEpisode(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (s *ContentStore) ListReviews(ctx context.Context) ([]content.ReviewItem, error) {
+	rows, err := s.pool.Query(ctx, `SELECT id::text, target_type, target_id::text, review_kind, status, requested_by_job_id::text, reviewed_by::text, review_note, created_at, reviewed_at FROM review_items ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []content.ReviewItem
+	for rows.Next() {
+		item, err := scanReview(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (s *ContentStore) GetReview(ctx context.Context, reviewID string) (content.ReviewItem, bool, error) {
+	row := s.pool.QueryRow(ctx, `SELECT id::text, target_type, target_id::text, review_kind, status, requested_by_job_id::text, reviewed_by::text, review_note, created_at, reviewed_at FROM review_items WHERE id=$1::uuid`, reviewID)
+	item, err := scanReview(row)
+	if err == pgx.ErrNoRows {
+		return content.ReviewItem{}, false, nil
+	}
+	return item, err == nil, err
+}
+
+func (s *ContentStore) SetReviewDecision(ctx context.Context, reviewID string, status content.ReviewStatus, actorID string, note string) (content.ReviewItem, error) {
+	row := s.pool.QueryRow(ctx, `
+		UPDATE review_items
+		SET status=$2, reviewed_by=$3::uuid, review_note=$4, reviewed_at=NOW()
+		WHERE id=$1::uuid AND status='pending'
+		RETURNING id::text, target_type, target_id::text, review_kind, status, requested_by_job_id::text, reviewed_by::text, review_note, created_at, reviewed_at
+	`, reviewID, status, actorID, note)
+	return scanReview(row)
+}
+
+func (s *ContentStore) SetProgramStatus(ctx context.Context, programID string, status content.ProgramStatus) (content.Program, error) {
+	row := s.pool.QueryRow(ctx, `
+		UPDATE programs
+		SET status=$2, updated_at=NOW(),
+		    published_at=CASE WHEN $2='published' THEN NOW() ELSE published_at END,
+		    archived_at=CASE WHEN $2='archived' THEN NOW() ELSE archived_at END
+		WHERE id=$1::uuid
+		RETURNING id::text, canonical_key, title, description, author, language, status, created_from_source_id::text, created_from_job_id::text, created_at, updated_at
+	`, programID, status)
+	return scanProgram(row)
+}
+
+func (s *ContentStore) SetEpisodeStatus(ctx context.Context, episodeID string, status content.EpisodeStatus) (content.Episode, error) {
+	row := s.pool.QueryRow(ctx, `
+		UPDATE episodes
+		SET status=$2, updated_at=NOW(),
+		    published_to_users_at=CASE WHEN $2='published' THEN NOW() ELSE published_to_users_at END,
+		    archived_at=CASE WHEN $2='archived' THEN NOW() ELSE archived_at END
+		WHERE id=$1::uuid
+		RETURNING id::text, program_id::text, external_episode_id, title, description, published_at, duration_seconds, status, source_job_id::text, created_at, updated_at
+	`, episodeID, status)
+	return scanEpisode(row)
+}
+
+func (s *ContentStore) UpdateProgram(ctx context.Context, programID string, in content.UpdateProgramInput) (content.Program, error) {
+	row := s.pool.QueryRow(ctx, `
+		UPDATE programs
+		SET title=COALESCE($2, title), description=COALESCE($3, description), author=COALESCE($4, author), language=COALESCE($5, language), updated_at=NOW()
+		WHERE id=$1::uuid
+		RETURNING id::text, canonical_key, title, description, author, language, status, created_from_source_id::text, created_from_job_id::text, created_at, updated_at
+	`, programID, in.Title, in.Description, in.Author, in.Language)
+	return scanProgram(row)
+}
+
+func (s *ContentStore) UpdateEpisode(ctx context.Context, episodeID string, in content.UpdateEpisodeInput) (content.Episode, error) {
+	row := s.pool.QueryRow(ctx, `
+		UPDATE episodes
+		SET title=COALESCE($2, title), description=COALESCE($3, description), published_at=COALESCE($4, published_at), duration_seconds=COALESCE($5, duration_seconds), updated_at=NOW()
+		WHERE id=$1::uuid
+		RETURNING id::text, program_id::text, external_episode_id, title, description, published_at, duration_seconds, status, source_job_id::text, created_at, updated_at
+	`, episodeID, in.Title, in.Description, in.PublishedAt, in.DurationSeconds)
+	return scanEpisode(row)
+}
+
+func (s *ContentStore) CountPendingReviews(ctx context.Context, targetType string, targetID string) (int, error) {
+	var count int
+	err := s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM review_items WHERE target_type=$1 AND target_id=$2::uuid AND status='pending'`, targetType, targetID).Scan(&count)
+	return count, err
+}
+
+func (s *ContentStore) HasApprovedMedia(ctx context.Context, episodeID string) (bool, error) {
+	var ok bool
+	err := s.pool.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM media_assets WHERE owner_type='episode' AND owner_id=$1::uuid AND media_kind='audio' AND status='approved'
+		) AND NOT EXISTS (
+			SELECT 1 FROM media_assets WHERE owner_type='episode' AND owner_id=$1::uuid AND status <> 'approved'
+		)
+	`, episodeID).Scan(&ok)
+	return ok, err
+}
+
+func (s *ContentStore) ApproveMediaForEpisode(ctx context.Context, episodeID string) error {
+	_, err := s.pool.Exec(ctx, `UPDATE media_assets SET status='approved' WHERE owner_type='episode' AND owner_id=$1::uuid AND status='staged'`, episodeID)
+	return err
+}
+
 func scanProgram(row interface{ Scan(dest ...any) error }) (content.Program, error) {
 	var item content.Program
 	err := row.Scan(&item.ID, &item.CanonicalKey, &item.Title, &item.Description, &item.Author, &item.Language, &item.Status, &item.CreatedFromSourceID, &item.CreatedFromJobID, &item.CreatedAt, &item.UpdatedAt)
@@ -194,6 +337,12 @@ func scanIntakeRun(row interface{ Scan(dest ...any) error }) (content.IntakeRun,
 	var programID *string
 	err := row.Scan(&item.ID, &item.ImportJobID, &item.Status, &item.ValidationIssuesRedacted, &programID, &item.CreatedAt, &item.UpdatedAt)
 	item.ProgramID = programID
+	return item, err
+}
+
+func scanReview(row interface{ Scan(dest ...any) error }) (content.ReviewItem, error) {
+	var item content.ReviewItem
+	err := row.Scan(&item.ID, &item.TargetType, &item.TargetID, &item.ReviewKind, &item.Status, &item.RequestedByJobID, &item.ReviewedBy, &item.ReviewNote, &item.CreatedAt, &item.ReviewedAt)
 	return item, err
 }
 

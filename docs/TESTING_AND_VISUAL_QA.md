@@ -156,6 +156,21 @@ Frontend:
 
 This phase does not run screenshot workflows.
 
+## M1.3B test focus
+
+Backend:
+
+- Content service tests cover review approve/reject, reject reason requirement, publish preconditions, media approval requirements, metadata update review/audit behavior, and archive transitions.
+- HTTP tests cover admin-only review access, approve/reject APIs, publish precondition errors, publish success, archive success, and response redaction.
+
+Frontend:
+
+- Admin Playwright tests cover review queue actions, reject reason errors, Program publish disabled state, Program publish success after approval, Episode publish/archive flow, and review empty state.
+- Pages use mocked real API contracts.
+- No feed management, media download, external Connector execution, or staging file path controls are shown.
+
+This phase does not run screenshot workflows.
+
 ## M1.1B test focus
 
 Backend:

@@ -9,9 +9,20 @@ type MediaStatus string
 
 const (
 	ProgramStatusReviewPending ProgramStatus = "review_pending"
+	ProgramStatusApproved      ProgramStatus = "approved"
+	ProgramStatusPublished     ProgramStatus = "published"
+	ProgramStatusArchived      ProgramStatus = "archived"
+	ProgramStatusRejected      ProgramStatus = "rejected"
 	EpisodeStatusReviewPending EpisodeStatus = "review_pending"
+	EpisodeStatusApproved      EpisodeStatus = "approved"
+	EpisodeStatusPublished     EpisodeStatus = "published"
+	EpisodeStatusArchived      EpisodeStatus = "archived"
+	EpisodeStatusRejected      EpisodeStatus = "rejected"
 	ReviewStatusPending        ReviewStatus  = "pending"
+	ReviewStatusApproved       ReviewStatus  = "approved"
+	ReviewStatusRejected       ReviewStatus  = "rejected"
 	MediaStatusStaged          MediaStatus   = "staged"
+	MediaStatusApproved        MediaStatus   = "approved"
 )
 
 type Program struct {
@@ -49,8 +60,10 @@ type ReviewItem struct {
 	ReviewKind       string       `json:"review_kind"`
 	Status           ReviewStatus `json:"status"`
 	RequestedByJobID *string      `json:"requested_by_job_id,omitempty"`
+	ReviewedBy       *string      `json:"reviewed_by,omitempty"`
 	ReviewNote       string       `json:"review_note"`
 	CreatedAt        time.Time    `json:"created_at"`
+	ReviewedAt       *time.Time   `json:"reviewed_at,omitempty"`
 }
 
 type MediaAsset struct {
@@ -118,4 +131,26 @@ type CreateMediaAssetInput struct {
 	ContentType      string
 	SizeBytes        int64
 	SHA256           string
+}
+
+type UpdateProgramInput struct {
+	Title       *string
+	Description *string
+	Author      *string
+	Language    *string
+	ActorID     string
+}
+
+type UpdateEpisodeInput struct {
+	Title           *string
+	Description     *string
+	PublishedAt     *time.Time
+	DurationSeconds *int
+	ActorID         string
+}
+
+type ReviewDecisionInput struct {
+	ReviewID string
+	ActorID  string
+	Reason   string
 }

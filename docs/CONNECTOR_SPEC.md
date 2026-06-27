@@ -304,6 +304,7 @@ Connector output reminders:
 - Connector output must be registered as ImportJob artifacts before the platform reads it.
 - Media references inside `metadata_bundle` must be registered relative artifact paths, not URLs, absolute paths, or path traversal values.
 - Connector metadata must not include Secret, Token, Cookie, Authorization, Session, or Password fields.
+- M1.3B review and publish actions are platform administrator actions only; Connector, Runner, and Intake output cannot mark content as published.
 - No secret upload/storage in connector package or manifest values.
 
 ## 9. Connector Configuration Lifecycle

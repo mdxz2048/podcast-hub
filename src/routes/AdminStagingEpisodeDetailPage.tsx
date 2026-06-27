@@ -45,7 +45,7 @@ export function AdminStagingEpisodeDetailPage() {
       </section>
       <section className="rounded-lg border border-warning/30 bg-warning/5 p-4 text-sm text-secondary">
         <p className="font-medium text-primary">媒体仍为私有 staging metadata</p>
-        <p className="mt-1">该页面不暴露文件路径、storage key、下载地址、RSS 链接或用户可见入口。</p>
+        <p className="mt-1">该页面不暴露文件路径、storage key、下载地址、订阅源链接或用户可见入口。</p>
       </section>
     </div>
   );

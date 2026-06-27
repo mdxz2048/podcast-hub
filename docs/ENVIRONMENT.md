@@ -153,3 +153,7 @@ openssl rand -base64 32
 ```
 
 or a raw 32-byte value managed by the deployment secret store. Never commit the generated value.
+
+## M1.3B environment additions
+
+M1.3B adds no new required environment variables. Review and publication state transitions use the existing PostgreSQL database and admin session/CSRF configuration.

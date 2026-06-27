@@ -403,7 +403,7 @@ Validation rules:
 - The platform does not download media from Connector-provided URLs.
 - API responses do not expose absolute paths, private storage keys, or file contents.
 
-Successful intake creates or updates review-pending staging Program/Episode candidates and pending ReviewItems only. It does not publish content or make media user-visible.
+Successful intake creates or updates review-pending staging Program/Episode candidates and pending ReviewItems only. It does not publish content or make media user-visible. In M1.3B, only administrator review and publish APIs can move targets to `approved` or `published`; Connector output cannot request or imply those states.
 
 ## 10. Manual Import Protocol
 

@@ -197,3 +197,115 @@ func (m *stagingMemoryContentStore) GetEpisode(_ context.Context, id string) (co
 	}
 	return content.Episode{}, false, nil
 }
+func (m *stagingMemoryContentStore) ListAdminPrograms(ctx context.Context) ([]content.Program, error) {
+	return m.ListStagingPrograms(ctx)
+}
+func (m *stagingMemoryContentStore) GetAdminProgram(ctx context.Context, id string) (content.Program, bool, error) {
+	return m.GetProgram(ctx, id)
+}
+func (m *stagingMemoryContentStore) GetAdminEpisode(ctx context.Context, id string) (content.Episode, bool, error) {
+	return m.GetEpisode(ctx, id)
+}
+func (m *stagingMemoryContentStore) ListProgramEpisodes(_ context.Context, programID string) ([]content.Episode, error) {
+	items := []content.Episode{}
+	for _, item := range m.episodes {
+		if item.ProgramID == programID {
+			items = append(items, item)
+		}
+	}
+	return items, nil
+}
+func (m *stagingMemoryContentStore) ListReviews(context.Context) ([]content.ReviewItem, error) {
+	return m.reviews, nil
+}
+func (m *stagingMemoryContentStore) GetReview(_ context.Context, id string) (content.ReviewItem, bool, error) {
+	for _, item := range m.reviews {
+		if item.ID == id {
+			return item, true, nil
+		}
+	}
+	return content.ReviewItem{}, false, nil
+}
+func (m *stagingMemoryContentStore) SetReviewDecision(_ context.Context, id string, status content.ReviewStatus, actorID string, note string) (content.ReviewItem, error) {
+	for i, item := range m.reviews {
+		if item.ID == id {
+			item.Status = status
+			item.ReviewedBy = &actorID
+			item.ReviewNote = note
+			now := time.Now()
+			item.ReviewedAt = &now
+			m.reviews[i] = item
+			return item, nil
+		}
+	}
+	return content.ReviewItem{}, nil
+}
+func (m *stagingMemoryContentStore) SetProgramStatus(ctx context.Context, id string, status content.ProgramStatus) (content.Program, error) {
+	item, _, _ := m.GetProgram(ctx, id)
+	item.Status = status
+	m.programs[id] = item
+	return item, nil
+}
+func (m *stagingMemoryContentStore) SetEpisodeStatus(ctx context.Context, id string, status content.EpisodeStatus) (content.Episode, error) {
+	item, _, _ := m.GetEpisode(ctx, id)
+	item.Status = status
+	m.episodes[item.ProgramID+":"+item.ExternalEpisodeID] = item
+	return item, nil
+}
+func (m *stagingMemoryContentStore) UpdateProgram(ctx context.Context, id string, in content.UpdateProgramInput) (content.Program, error) {
+	item, _, _ := m.GetProgram(ctx, id)
+	if in.Title != nil {
+		item.Title = *in.Title
+	}
+	if in.Description != nil {
+		item.Description = *in.Description
+	}
+	if in.Author != nil {
+		item.Author = *in.Author
+	}
+	if in.Language != nil {
+		item.Language = *in.Language
+	}
+	m.programs[id] = item
+	return item, nil
+}
+func (m *stagingMemoryContentStore) UpdateEpisode(ctx context.Context, id string, in content.UpdateEpisodeInput) (content.Episode, error) {
+	item, _, _ := m.GetEpisode(ctx, id)
+	if in.Title != nil {
+		item.Title = *in.Title
+	}
+	if in.Description != nil {
+		item.Description = *in.Description
+	}
+	if in.DurationSeconds != nil {
+		item.DurationSeconds = *in.DurationSeconds
+	}
+	m.episodes[item.ProgramID+":"+item.ExternalEpisodeID] = item
+	return item, nil
+}
+func (m *stagingMemoryContentStore) CountPendingReviews(_ context.Context, targetType string, targetID string) (int, error) {
+	count := 0
+	for _, item := range m.reviews {
+		if item.TargetType == targetType && item.TargetID == targetID && item.Status == content.ReviewStatusPending {
+			count++
+		}
+	}
+	return count, nil
+}
+func (m *stagingMemoryContentStore) HasApprovedMedia(_ context.Context, episodeID string) (bool, error) {
+	for _, item := range m.media {
+		if item.OwnerID == episodeID && item.MediaKind == "audio" && item.Status == content.MediaStatusApproved {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+func (m *stagingMemoryContentStore) ApproveMediaForEpisode(_ context.Context, episodeID string) error {
+	for i, item := range m.media {
+		if item.OwnerID == episodeID {
+			item.Status = content.MediaStatusApproved
+			m.media[i] = item
+		}
+	}
+	return nil
+}

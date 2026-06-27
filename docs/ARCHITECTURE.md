@@ -110,6 +110,25 @@ The Intake Service does not execute Connectors, does not read Secret plaintext, 
 
 Program matching is Source scoped: `program_sources(connector_source_id, external_program_id)` is the stable key. A matching title from a different Source never auto-merges content.
 
+### 3.4.2 Review And Publication State Machine
+
+M1.3B adds administrator-controlled review and publication transitions.
+
+```text
+review_pending -> approved -> published -> archived
+review_pending -> rejected
+approved -> rejected
+```
+
+Rules:
+
+- `approved` means review has passed; it does not imply user visibility.
+- `published` is an explicit administrator action after backend precondition checks.
+- Program publish requires approved status, no pending Program review, a valid title, and an existing Source reference.
+- Episode publish requires approved status, a published parent Program, no pending Episode review, and approved audio MediaAsset metadata.
+- Metadata edits write `publication_events`; edits on published targets create or keep a pending metadata review.
+- Connector, Runner, and Intake services cannot publish content.
+
 ### 3.5 Connector Registry
 
 Stores Connector package metadata, validation results, approval state, and package artifact references.
