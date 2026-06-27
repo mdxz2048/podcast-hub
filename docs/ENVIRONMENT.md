@@ -190,3 +190,7 @@ Important deployment variables:
 - `RUNNER_MODE=disabled` by default
 - `RUNNER_TRUSTED_ADMIN_ENABLED`
 - `BACKUP_DIR`
+
+## D2.1 local smoke environment
+
+`scripts/smoke-user-beta-local.sh` generates a temporary `.env.user-beta.smoke` under the system temp directory. It uses development mode, mock Turnstile, localhost-only API binding, generated test-only secrets, and temporary Compose volumes. Do not reuse those generated values for private deployment.

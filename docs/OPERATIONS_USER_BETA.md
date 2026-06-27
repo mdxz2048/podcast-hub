@@ -76,6 +76,7 @@ docker compose -f deploy/compose.user-beta.yml --env-file .env.user-beta up -d p
 
 The API applies migrations on startup. PostgreSQL and Redis are not published to public host ports by this compose file.
 The compose file creates the stable private Docker network `podcast_hub_user_beta_private` and stable named volumes used by the separate Runner compose file.
+The `api-volume-init` service runs once to prepare private data volume ownership for the non-root API container.
 
 ## Runner
 

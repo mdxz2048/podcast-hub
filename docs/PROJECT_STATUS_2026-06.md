@@ -13,12 +13,13 @@
 - M1.2E: **Completed** (Docker fixture integration smoke, Runner Secret injection boundary, separate Runner compose)
 - M1.3A: **Completed** (completed ImportJob artifact intake into review-pending staging Program/Episode candidates)
 - M1.3B: **Completed** (admin review, metadata edit, approve/reject, publish/archive state machine)
-- M1.5A: **Completed in current workspace changes** (private published-media delivery with authorization-aware storage promotion and HTTP range support)
-- M1.5B: **Completed in current workspace changes** (private RSS feeds, feed token rotation/revocation, and token-backed private enclosures)
-- P0 User Beta baseline: **Completed in current workspace changes** (request correlation IDs are now server-generated random values with no hostname, `.local`, path, token, cookie, or caller-supplied content)
-- M1.3C: **Completed in current workspace changes** (real authorized user catalog APIs, personal collections, and admin Program access-grant UI/API integration)
-- M1.5C: **Completed in current workspace changes** (real user RSS management page, admin RSS metadata/revoke page, and RSS token redaction audit call points)
-- D2: **Completed in current workspace changes** (private User Beta deployment candidate files, preflight, backup/restore scripts, and operations docs)
+- M1.5A: **Completed** (private published-media delivery with authorization-aware storage promotion and HTTP range support)
+- M1.5B: **Completed** (private RSS feeds, feed token rotation/revocation, and token-backed private enclosures)
+- P0 User Beta baseline: **Completed** (request correlation IDs are now server-generated random values with no hostname, `.local`, path, token, cookie, or caller-supplied content)
+- M1.3C: **Completed** (real authorized user catalog APIs, personal collections, and admin Program access-grant UI/API integration)
+- M1.5C: **Completed** (real user RSS management page, admin RSS metadata/revoke page, and RSS token redaction audit call points)
+- D2: **Completed** (private User Beta deployment candidate files, preflight, backup/restore scripts, and operations docs)
+- D2.1: **Implemented in current workspace changes; local apply smoke environment-blocked** (local-only User Beta smoke script with fixture catalog/media/RSS, revocation checks, backup, and temporary restore verification; current Docker pull did not reach app assertions)
 
 ## Clarifications
 

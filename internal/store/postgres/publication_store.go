@@ -290,8 +290,8 @@ const mediaAccessSelect = `
 	FROM episodes e
 	JOIN programs p ON p.id=e.program_id
 	JOIN media_assets ma ON ma.owner_type='episode' AND ma.owner_id=e.id AND ma.media_kind='audio' AND ma.status='published' AND ma.delivery_status='published' AND ma.deleted_at IS NULL AND COALESCE(ma.published_storage_key,'') <> ''
-	JOIN program_access_grants pag ON pag.program_id=p.id AND pag.user_id=u.id AND pag.status='active' AND pag.revoked_at IS NULL
 	JOIN users u ON u.id=$1::uuid AND u.status='active'
+	JOIN program_access_grants pag ON pag.program_id=p.id AND pag.user_id=u.id AND pag.status='active' AND pag.revoked_at IS NULL
 	WHERE e.status='published' AND p.status='published'
 `
 

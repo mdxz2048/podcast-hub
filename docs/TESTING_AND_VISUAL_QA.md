@@ -214,6 +214,16 @@ Static deployment validation covers:
 
 Real public deployment, real restore against private data, real external Connector execution, and real media download are not part of D2.
 
+## D2.1 local smoke checks
+
+Local User Beta smoke validation covers:
+
+- `bash -n scripts/smoke-user-beta-local.sh`
+- `scripts/smoke-user-beta-local.sh --dry-run`
+- `bash scripts/smoke-user-beta-local.sh --apply` when Docker base images are locally available or reachable.
+
+The smoke uses temporary local Compose data only. It creates fixture users, a published Program/Episode, a small text media fixture, an active grant, a private RSS Feed, a token rotation, a grant revocation, and backup/restore verification. It must not print secrets, cookies, RSS tokens, or complete private RSS URLs.
+
 Frontend:
 
 - Admin Playwright tests cover Source empty state, Source creation from approved version, Secret metadata display, and absence of runtime/download controls.

@@ -80,6 +80,8 @@ M1.5C connects user and admin RSS management pages to the publication API. Plain
 
 D2 packages the current architecture as a private User Beta deployment candidate. The API, frontend, PostgreSQL, Redis, reverse proxy, and Runner are separated by compose files. API containers do not mount the Docker socket. Runner is separate and defaults to disabled. Private media, staging, Import artifacts, Connector packages, and Secret-related storage are isolated from the static frontend.
 
+D2.1 adds a local-only smoke harness for the deployment candidate. It starts an isolated Compose project, binds the API only to localhost, inserts fixture published content and access grants, verifies private media and RSS revocation behavior, and validates backup plus temporary restore without touching existing development databases or real media.
+
 ### 3.4 Domain Service Layer
 
 Encapsulates business policies:

@@ -180,6 +180,8 @@ Only create and rotate responses expose plaintext token URLs. RSS list and admin
 
 D2 deployment candidate adds no new application routes. It adds reverse proxy routing for frontend, API, and `/rss/private/*` token paths in `deploy/Caddyfile.user-beta.template`.
 
+D2.1 adds no new application routes. The local smoke script exercises existing user catalog, private media, RSS Feed, and enclosure routes through a localhost-only API port.
+
 ## 5. Route Guard States
 
 Route guard behavior in M1.0C:
